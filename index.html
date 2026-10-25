@@ -294,6 +294,7 @@ h1.q{font-size:30px;line-height:1.12}
 <div id="layer"></div>
 <div id="toastbox"></div>
 
+<script src="/lib/supabase.js"></script>
 <script>
 /*LOGIC-START*/
 const pad=n=>String(n).padStart(2,'0');
@@ -497,16 +498,76 @@ const KEY='lia.app.v1';
 const DEFAULT_SETTINGS={wake:'07:00',sleep:'23:00',maxDay:180,block:60,minBlock:30,autonomy:'auto',name:''};
 function emptyState(){return{v:1,mode:'own',onboarded:false,settings:{...DEFAULT_SETTINGS},commitments:[],evals:[],done:[],exceptions:[],
   chat:[{from:'lia',text:'¡Hola! Soy Lía, tu secretaria. Dime tus horarios o tus exámenes y yo armo tu semana.'}]};}
-let state;let fresh=false;
-try{const raw=localStorage.getItem(KEY);state=raw?JSON.parse(raw):null;}catch(e){state=null;}
-if(!state||state.v!==1||state.mode==='example'){state=emptyState();fresh=true;}
-if(!state.onboarded)fresh=true;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+// ---------- Nube (Supabase) ----------
+const SB_URL='https://xsvrbzwcxmkwsnojyhnx.supabase.co';
+const SB_KEY='sb_publishable_TGxe33KUruvFkV7I2d7_tw_ccD7lhFV';
+let sb=null;try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});}catch(e){sb=null;}
+const auth={uid:null,email:null,ready:false};
+const sync={state:'idle'};
+let state=null,cacheUid=null;
+try{const raw=localStorage.getItem(KEY);const o=raw?JSON.parse(raw):null;
+  if(o&&o.state&&o.state.v===1){state=o.state;cacheUid=o.uid||null;}
+  else if(o&&o.v===1&&o.mode!=='example'&&o.onboarded){state=o;cacheUid=null;}}catch(e){}
+if(!state)state=emptyState();
+function normalize(x){return{...emptyState(),...x,settings:{...DEFAULT_SETTINGS,...(x.settings||{})}};}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({uid:auth.uid,state}));}catch(e){}}
+function save(){state._at=Date.now();saveLocal();cloudPush();}
+let pushT=null,dirty=false;
+function cloudPush(){if(!sb||!auth.uid)return;dirty=true;sync.state='saving';clearTimeout(pushT);pushT=setTimeout(flush,1200);}
+async function flush(){if(!sb||!auth.uid||!dirty)return;if(!navigator.onLine){sync.state='offline';return;}
+  dirty=false;sync.state='saving';
+  try{const {error}=await sb.from('user_data').upsert({user_id:auth.uid,data:state,updated_at:new Date().toISOString()});
+    if(error)throw error;sync.state='saved';}
+  catch(e){dirty=true;sync.state=/fetch|network|failed/i.test(e.message||'')?'offline':'error';sync.err=e.message;}}
+window.addEventListener('online',()=>{if(dirty)flush();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&dirty)flush();});
+async function onSignedIn(user){auth.uid=user.id;auth.email=user.email;
+  const sameCache=cacheUid===user.id,legacy=cacheUid===null&&state.onboarded;
+  if(!sameCache&&!legacy)state=emptyState();
+  try{const {data:row,error}=await sb.from('user_data').select('data').eq('user_id',user.id).maybeSingle();if(error)throw error;
+    if(row&&row.data&&row.data.v===1){if(!(sameCache||legacy)||(row.data._at||0)>=(state._at||0))state=normalize(row.data);else dirty=true;}
+    else if(state.onboarded)dirty=true;
+    sync.state='saved';}
+  catch(e){sync.state='offline';}
+  cacheUid=user.id;saveLocal();if(dirty)flush();
+  ui.auth=null;ui.welcome=false;if(!state.onboarded)ui.ob=ui.ob||1;}
+function authMsg(e){const m=String(e&&e.message||'').toLowerCase();
+  if(m.includes('invalid login'))return'Correo o contraseña incorrectos.';
+  if(m.includes('already registered')||m.includes('already been registered')||m.includes('already exists'))return'Ese correo ya tiene cuenta. Toca “Ya tengo cuenta” para entrar.';
+  if(m.includes('password')&&(m.includes('6')||m.includes('short')||m.includes('weak')))return'La contraseña debe tener al menos 6 caracteres.';
+  if(m.includes('not confirmed'))return'Falta confirmar tu correo. Revisa tu bandeja de entrada.';
+  if(m.includes('email')&&(m.includes('invalid')||m.includes('format')))return'Ese correo no parece válido.';
+  if(m.includes('rate')||m.includes('too many'))return'Demasiados intentos. Espera un minuto y vuelve a intentar.';
+  if(m.includes('fetch')||m.includes('network')||m.includes('failed'))return'Sin conexión. Revisa tu internet y vuelve a intentar.';
+  return'No se pudo completar: '+(e&&e.message||'error desconocido');}
+async function doAuth(email,pass){const login=ui.auth==='login';
+  const btn=document.getElementById('au-btn'),er=document.getElementById('au-err');
+  const busy=b=>{if(btn){btn.disabled=b;btn.textContent=b?'Un momento…':login?'Entrar':'Crear cuenta';}};
+  const fail=m=>{busy(false);if(er){er.hidden=false;er.textContent=m;}haptic();};
+  if(er)er.hidden=true;
+  if(!sb)return fail('No se pudo conectar con LIA. Revisa tu internet y vuelve a abrir la app.');
+  busy(true);
+  try{const r=login?await sb.auth.signInWithPassword({email,password:pass}):await sb.auth.signUp({email,password:pass});
+    if(r.error)throw r.error;
+    if(!r.data.session){ui.auth='login';return fail('Te enviamos un correo para confirmar tu cuenta. Ábrelo y luego entra aquí.');}
+    await onSignedIn(r.data.session.user);render();
+    if(!login)toast('¡Cuenta creada! Ahora armemos tu semana.');}
+  catch(e){fail(authMsg(e));}}
+async function boot(){const t0=Date.now();
+  let sess=null;
+  if(sb){try{const {data}=await sb.auth.getSession();sess=data.session;}catch(e){}}
+  if(sess){if(cacheUid===sess.user.id){auth.uid=sess.user.id;auth.email=sess.user.email;auth.ready=true;if(!state.onboarded)ui.ob=1;render();hideSplash(t0);await onSignedIn(sess.user);render();return;}
+    await onSignedIn(sess.user);}
+  else{ui.welcome=true;ui.slide=0;}
+  auth.ready=true;render();hideSplash(t0);}
+function hideSplash(t0){const wait=matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.max(0,900-(Date.now()-t0));
+  setTimeout(()=>{const sp=document.getElementById('splash');if(sp){sp.classList.add('out');setTimeout(()=>sp.remove(),450);}},wait);}
+function syncLabel(){return{saving:'Guardando…',saved:'Al día',offline:'Sin conexión: se guardará al volver',error:'No se pudo guardar',idle:'Al día'}[sync.state]||'Al día';}
 let undoStack=null;
 function snapshot(){undoStack=JSON.stringify(state);}
 function undo(){if(!undoStack)return;state=JSON.parse(undoStack);undoStack=null;save();render();toast('Listo, lo dejé como estaba.');}
 
-const ui={tab:'hoy',welcome:fresh,ob:0,weekOffset:0,sel:null,sheet:null,session:null,listen:null,pending:null};
+const ui={auth:null,tab:'hoy',welcome:false,ob:0,weekOffset:0,sel:null,sheet:null,session:null,listen:null,pending:null};
 
 // ---------- Íconos ----------
 const I={
@@ -563,12 +624,25 @@ function vWelcome(){const s=ui.slide||0;const last=s===2;
    <div class="slides" id="slides">${slides.map((x,i)=>`<div class="slide" aria-hidden="${i!==s}"><div class="art-wrap">${x.art}</div><div class="copy"><h1>${x.h}</h1><p>${x.p}</p></div></div>`).join('')}</div>
    <div class="obw-bottom" id="obw-bottom">${welcomeBottom(s)}</div></section>`;}
 function welcomeBottom(s){const last=s===2;return `<div class="dots">${[0,1,2].map(i=>`<button data-a="slide-go" data-i="${i}" aria-label="Pantalla ${i+1}" class="${i===s?'on':''}"></button>`).join('')}</div>
-    ${last?`<button class="btn wbtn" data-a="start-own">Empezar</button><span class="wlink" style="opacity:.7;font-weight:500">Toma 2 minutos</span>`
-          :`<button class="btn wbtn" data-a="slide-go" data-i="${s+1}">Siguiente</button><span class="wlink" style="visibility:hidden">·</span>`}`;}
+    ${last?`<button class="btn wbtn" data-a="start-own">Crear mi cuenta</button><button class="wlink" data-a="go-login">Ya tengo cuenta</button>`
+          :`<button class="btn wbtn" data-a="slide-go" data-i="${s+1}">Siguiente</button><button class="wlink" data-a="go-login">Ya tengo cuenta</button>`}`;}
 
+function vAuth(){const login=ui.auth==='login';return `<section class="setup">
+  <div class="setup-top"><button class="iconbtn" data-a="auth-back" aria-label="Atrás">${I.back}</button></div>
+  <form class="setup-body enter" data-form="auth" novalidate>
+   <div>${AV(64)}</div>
+   <h1 class="q">${login?'Hola de nuevo':'Crea tu cuenta'}</h1>
+   <p class="muted">${login?'Entra con tu correo y contraseña.':'Así tus horarios quedan guardados aunque cambies de celular.'}</p>
+   <label class="f">Correo<input type="email" name="email" id="au-email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="tucorreo@gmail.com" value="${esc(ui.authEmail||'')}"></label>
+   <label class="f">Contraseña<input type="password" name="pass" id="au-pass" autocomplete="${login?'current-password':'new-password'}" placeholder="Mínimo 6 caracteres"></label>
+   <div class="warn small" id="au-err" hidden></div>
+   <button class="btn pri" type="submit" id="au-btn">${login?'Entrar':'Crear cuenta'}</button>
+   <button type="button" class="wlink" style="color:var(--pri)" data-a="auth-switch">${login?'¿No tienes cuenta? Créala aquí':'Ya tengo cuenta · Entrar'}</button>
+   ${login?'':'<p class="small muted" style="text-align:center;margin:0">Al crear tu cuenta aceptas los términos y la política de privacidad de LIA.</p>'}
+  </form></section>`;}
 const OB_STEPS=5;
 function obShell(step,inner,footer){return `<section class="setup">
-  <div class="setup-top"><button class="iconbtn" data-a="ob-back" aria-label="Atrás">${I.back}</button><div class="progress">${[...Array(OB_STEPS-1)].map((_,i)=>`<i class="${i<step?'on':''}"></i>`).join('')}</div><span style="width:40px"></span></div>
+  <div class="setup-top"><button class="iconbtn" data-a="ob-back" aria-label="Atrás" style="${step<=1?'visibility:hidden':''}">${I.back}</button><div class="progress">${[...Array(OB_STEPS-1)].map((_,i)=>`<i class="${i<step?'on':''}"></i>`).join('')}</div><span style="width:40px"></span></div>
   <div class="setup-body enter">${inner}</div>
   <div class="setup-foot">${footer}</div></section>`;}
 function voiceCard(kind,example){return `<div class="vcard"><button class="vmic" data-a="mic" data-target="dict-${kind}" aria-label="Dictar por voz">${I.mic}</button>
@@ -679,10 +753,11 @@ function vPerfil(){const S=state.settings,p=P();const covered=state.evals.filter
    <label class="opt"><input type="radio" name="aut" id="aut-auto" data-set="autonomy" value="auto" ${S.autonomy==='auto'?'checked':''}><span><b>Hazlo y avísame</b><br><span class="small muted">Lía mueve tus bloques y te cuenta qué cambió.</span></span></label>
    <label class="opt"><input type="radio" name="aut" id="aut-ask" data-set="autonomy" value="ask" ${S.autonomy==='ask'?'checked':''}><span><b>Pregúntame antes</b><br><span class="small muted">Lía te propone el cambio y tú apruebas.</span></span></label>
   </div>
-  <span class="eyebrow">Tus datos</span>
-  <div class="card small muted">Todo se guarda solo en este teléfono, en este navegador.</div>
+  <span class="eyebrow">Tu cuenta</span>
+  <div class="card stack small"><div class="between"><span class="muted">Correo</span><b style="overflow-wrap:anywhere;text-align:right">${esc(auth.email||'')}</b></div>
+   <div class="between"><span class="muted">Guardado en la nube</span><b style="color:${sync.state==='error'?'var(--exam-ink)':sync.state==='offline'?'var(--trabajo-ink)':'var(--ok)'}">${syncLabel()}</b></div></div>
   ${installHTML()}
-  <div class="stack"><button class="btn danger" data-a="ask-reset">Borrar todo</button></div>`;}
+  <div class="stack"><button class="btn sec" data-a="ask-logout">Cerrar sesión</button><button class="btn danger" data-a="ask-reset">Borrar mis datos</button></div>`;}
 
 // ---------- Hojas (formularios) ----------
 const COMMIT_PRESET={clase:{name:'Clases',start:'08:00',end:'13:00'},trabajo:{name:'Trabajo',start:'15:00',end:'19:00'},traslado:{name:'Traslado',start:'19:00',end:'19:45'},otro:{name:'',start:'18:00',end:'19:00'}};
@@ -705,8 +780,8 @@ function sheetBlock(d){const e=evById(d.ev);return `<div class="grab"></div><spa
   <button class="btn sec" data-a="done-block" data-ev="${d.ev}" data-d="${d.d}" data-s="${d.s}" data-e="${d.e}">Ya lo estudié</button>
   <button class="btn sec" data-a="move" data-ev="${d.ev}" data-d="${d.d}" data-s="${d.s}" data-e="${d.e}">No puedo a esa hora · que Lía lo mueva</button>
   <button class="btn sec" data-a="close">Cerrar</button>`;}
-function sheetReset(){return `<div class="grab"></div><h2>¿Borrar todo?</h2><p class="muted" style="margin:0">Se borran tus compromisos, evaluaciones y sesiones de este teléfono, y vuelves al inicio. No se puede deshacer.</p><button class="btn danger" data-a="reset">Sí, borrar todo</button><button class="btn sec" data-a="close">Cancelar</button>`;}
-function sheetOwn(){return `<div class="grab"></div><h2>Empezar con tus horarios</h2><p class="muted" style="margin:0">Vamos a quitar los datos de ejemplo y registrar tu semana real. Toma 2 minutos.</p><button class="btn pri" data-a="own-go">Empezar</button><button class="btn sec" data-a="close">Seguir viendo el ejemplo</button>`;}
+function sheetReset(){return `<div class="grab"></div><h2>¿Borrar tus datos?</h2><p class="muted" style="margin:0">Se borran tus compromisos, evaluaciones y sesiones de tu cuenta, y vuelves a hacer el registro. No se puede deshacer.</p><button class="btn danger" data-a="reset">Sí, borrar mis datos</button><button class="btn sec" data-a="close">Cancelar</button>`;}
+function sheetLogout(){return `<div class="grab"></div><h2>¿Cerrar sesión?</h2><p class="muted" style="margin:0">Tus datos quedan guardados en tu cuenta. Para volver, entra con tu correo y contraseña.</p><button class="btn pri" data-a="logout">Cerrar sesión</button><button class="btn sec" data-a="close">Cancelar</button>`;}
 
 // ---------- Sesión y escucha ----------
 function vSession(){const s=ui.session;const e=evById(s.ev);const left=Math.max(0,s.total-s.elapsed());const pct=1-left/s.total;const C=2*Math.PI*104;
@@ -748,10 +823,12 @@ function bindSlides(){const el=document.getElementById('slides');if(!el)return;
 // ---------- Render ----------
 const TABS=[['hoy','Hoy','sun'],['semana','Semana','cal'],['lia','Lía',null],['evals','Evaluaciones','list'],['perfil','Perfil','user']];
 function render(){const v=document.getElementById('view'),tabs=document.getElementById('tabs');
-  const inOb=ui.welcome||!state.onboarded;
+  const inOb=!auth.ready||ui.welcome||!auth.uid||!state.onboarded;
   tabs.hidden=inOb;
-  if(ui.welcome)v.innerHTML=vWelcome();
-  else if(!state.onboarded)v.innerHTML=vOnboarding();
+  if(!auth.ready)v.innerHTML='';
+  else if(ui.welcome)v.innerHTML=vWelcome();
+  else if(!auth.uid){ui.auth=ui.auth||'signup';v.innerHTML=vAuth();}
+  else if(!state.onboarded){ui.ob=ui.ob||1;v.innerHTML=vOnboarding();}
   else v.innerHTML={hoy:vHoy,semana:vSemana,lia:vLia,evals:vEvals,perfil:vPerfil}[ui.tab]();
   document.body.classList.toggle('wm',!!ui.welcome);v.style.paddingTop=inOb?'0':'';v.style.paddingBottom=inOb?'0':'';
   const tc=document.querySelector('meta[name=theme-color]');if(tc)tc.content=ui.welcome?'#3D3BF3':getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#F6F4EF';
@@ -811,9 +888,14 @@ function applyException(ex){const p0=P();snapshot();state.exceptions.push({id:ui
 
 const A={
  tab:d=>{if(ui.tab!==d.t)haptic();const ch=ui.tab!==d.t;ui.tab=d.t;ui.sheet=null;render();const v=document.getElementById('view');v.scrollTop=0;if(ch){v.classList.remove('enter');void v.offsetWidth;v.classList.add('enter');}},
- 'start-own':()=>{A['own-go']();},
- 'own-go':()=>{state=emptyState();save();ui.welcome=false;ui.ob=1;ui.sheet=null;render();},
- 'ob-back':()=>{haptic();if(ui.ob<=1){ui.welcome=true;ui.slide=2;}else ui.ob--;render();},
+ 'start-own':()=>{haptic();ui.welcome=false;ui.auth='signup';render();},
+ 'go-login':()=>{haptic();ui.welcome=false;ui.auth='login';render();},
+ 'auth-switch':()=>{const e=document.getElementById('au-email');ui.authEmail=e?e.value:'';ui.auth=ui.auth==='login'?'signup':'login';render();},
+ 'auth-back':()=>{ui.auth=null;ui.welcome=true;ui.slide=2;render();},
+ 'ask-logout':()=>{ui.sheet=sheetLogout();render();},
+ logout:async()=>{ui.sheet=null;try{await flush();}catch(e){}try{await sb.auth.signOut();}catch(e){}
+   try{localStorage.removeItem(KEY);}catch(e){}state=emptyState();auth.uid=null;auth.email=null;cacheUid=null;ui.welcome=true;ui.slide=0;ui.tab='hoy';render();},
+ 'ob-back':()=>{haptic();if(ui.ob>1)ui.ob--;render();},
  'ob-next':()=>{haptic();ui.ob++;render();document.getElementById('view').scrollTop=0;},
  'ob-finish':()=>{haptic();state.onboarded=true;save();ui.tab='hoy';ui.sel=null;render();toast(`¡Listo${state.settings.name?', '+state.settings.name:''}! Esta es tu semana.`);},
  'add-commit':()=>{ui.sheet=sheetCommit();render();},
@@ -847,7 +929,7 @@ const A={
  close:()=>{ui.sheet=null;render();},
  scrim:(d,el,ev)=>{if(ev.target===el){ui.sheet=null;render();}},
  'ask-reset':()=>{ui.sheet=sheetReset();render();},
- reset:()=>{try{localStorage.removeItem(KEY);}catch(e){}state=emptyState();ui.welcome=true;ui.slide=0;ui.sheet=null;ui.tab='hoy';render();},
+ reset:()=>{const name=state.settings.name;state=emptyState();state.settings.name=name;save();ui.ob=1;ui.sheet=null;ui.tab='hoy';render();toast('Listo, empecemos de nuevo.');},
  mic:d=>startMic(d.target),
  'listen-stop':()=>{stopMic(true);},
  'listen-cancel':()=>{stopMic(false);},
@@ -856,6 +938,11 @@ const A={
 document.addEventListener('click',ev=>{const el=ev.target.closest('[data-a]');if(!el)return;const f=A[el.dataset.a];if(!f)return;
   if(el.dataset.a==='scrim'){f(el.dataset,el,ev);return;}ev.preventDefault();f(el.dataset,el,ev);});
 document.addEventListener('submit',ev=>{const f=ev.target;ev.preventDefault();const fd=new FormData(f);
+  if(f.dataset.form==='auth'){const email=String(fd.get('email')||'').trim().toLowerCase(),pass=String(fd.get('pass')||'');ui.authEmail=email;
+    const er=document.getElementById('au-err');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(er){er.hidden=false;er.textContent='Escribe un correo válido.';}return;}
+    if(pass.length<6){if(er){er.hidden=false;er.textContent='La contraseña debe tener al menos 6 caracteres.';}return;}
+    doAuth(email,pass);return;}
   if(f.dataset.form==='chat'||f.dataset.form==='dictar'){const q=fd.get('q')||'';handleText(String(q),f.dataset.form==='chat'?'chat':f.dataset.kind);return;}
   if(f.dataset.form==='commit'){const days=fd.getAll('d').map(Number);if(!days.length){toast('Elige al menos un día.');return;}
     if(toMin(fd.get('end'))<=toMin(fd.get('start'))){toast('La hora de fin debe ser después del inicio.');return;}
@@ -889,9 +976,9 @@ function stopMic(useIt){if(!ui.listen)return;const t=ui.listen.text,tg=ui.listen
 function submitVoice(target,text){const from=target==='chat-in'?'chat':target==='dict-commit'?'commit':'eval';handleText(text,from);}
 
 render();
-setTimeout(()=>{const sp=document.getElementById('splash');if(sp){sp.classList.add('out');setTimeout(()=>sp.remove(),450);}},matchMedia('(prefers-reduced-motion: reduce)').matches?0:900);
+boot();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
-setInterval(()=>{if(!ui.session&&!ui.sheet&&!ui.listen&&!document.activeElement.matches('input,select'))rerenderKeepScroll();},60000);
+setInterval(()=>{if(auth.uid&&state.onboarded&&!ui.session&&!ui.sheet&&!ui.listen&&!document.activeElement.matches('input,select'))rerenderKeepScroll();},60000);
 </script>
 
 </body>

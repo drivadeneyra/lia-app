@@ -11,12 +11,18 @@ App web instalable (PWA) para universitarios que estudian y trabajan: registra t
 - Instalable en Android (Chrome → Instalar app) y iPhone (Safari → Compartir → Agregar a inicio).
 - Funciona sin conexión. Los datos se guardan en el teléfono.
 
+## Cuentas y nube (Supabase)
+
+- Registro e inicio de sesión con correo y contraseña.
+- Los datos de cada usuario se guardan en la tabla `user_data` y se sincronizan solos.
+- La tabla `subscriptions` guarda el plan (gratis / pro). Solo se cambia desde el panel de Supabase.
+- Configuración inicial de la base de datos: `supabase/001_inicio.sql` (pegar en SQL Editor y ejecutar).
+
 ## Próximos pasos
 
-1. Cuentas de usuario y datos en la nube (Supabase).
-2. Lía con IA (Gemini) y lectura de sílabos en PDF.
-3. Notificaciones antes de cada bloque.
-4. Plan Pro y pagos (Yape / Mercado Pago).
+1. Lía con IA (Gemini) y lectura de sílabos en PDF.
+2. Notificaciones antes de cada bloque.
+3. Plan Pro y pagos (Yape / Mercado Pago).
 
 ## Publicación
 
