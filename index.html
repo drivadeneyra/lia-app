@@ -927,13 +927,14 @@ async function callLia(payload){
     time:fmt(n.getHours()*60+n.getMinutes()),context:buildContext(),history:payload.history||[]};
   let res;
   try{res=await sb.functions.invoke('lia',{body});}catch(e){throw{userMsg:'No pude conectarme con Lía. Revisa tu internet.',offline:true};}
+  if(res.error&&!(res.error.context&&res.error.context.status))console.warn('Lía:',res.error);
   const {data,error}=res;
   if(error){const st=error.context&&error.context.status;let msg='Lía no está disponible en este momento. Inténtalo en un rato.';
     if(st===404)msg='Lía todavía no está instalada en el servidor.';
     else if(st===429)msg='Lía recibió muchas consultas hoy. Vuelve a intentarlo en un rato.';
     else if(st===401)msg='Tu sesión venció. Cierra sesión y vuelve a entrar.';
     else if(st===413)msg='El archivo es muy grande. Prueba con uno más liviano o con una foto.';
-    else if(!st)msg='No pude conectarme con Lía. Revisa tu internet.';
+    else if(!st)msg='No pude conectarme con el servidor de Lía. Revisa que la función “lia” esté publicada en Supabase.';
     try{const j=await error.context.json();if(j&&j.error&&/GEMINI_API_KEY/.test(j.error))msg='Falta configurar la clave de Gemini en Supabase.';}catch(e){}
     throw{userMsg:msg,status:st,offline:!st};}
   if(!data||typeof data.reply!=='string')throw{userMsg:'Lía no pudo responder. Inténtalo de nuevo.'};
@@ -973,7 +974,7 @@ async function askLia(payload,from){
   let res;
   try{res=await callLia({...payload,history});}
   catch(e){ui.thinking=false;ui.busy=false;
-    if(payload.text&&e.offline){ if(inChat)state.chat.pop(); handleText(payload.text,from==='chat'?'chat':from); return;}
+    if(payload.text&&!navigator.onLine){ if(inChat)state.chat.pop(); handleText(payload.text,from==='chat'?'chat':from); return;}
     if(inChat){liaSay(e.userMsg||'Algo falló. Inténtalo de nuevo.');render();}else{toast(e.userMsg||'Algo falló. Inténtalo de nuevo.');}
     return;}
   ui.thinking=false;ui.busy=false;
