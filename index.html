@@ -277,6 +277,17 @@ h1.q{font-size:30px;line-height:1.12}
 .appear{animation:appear .45s ease-out both}
 @keyframes appear{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes tdrop{from{opacity:0;margin-top:-12px}to{opacity:1;margin-top:0}}
+/* chat extras */
+.typing{flex-direction:row!important;gap:5px!important;padding:14px 16px!important}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--mute);animation:blink 1.2s infinite ease-in-out}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+.vtag{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.vtag svg{width:14px;height:14px}
+.inbar .iconbtn{flex:none;width:44px;height:44px}
+.pill svg{width:14px;height:14px}
+.full .wave{display:flex;gap:5px;align-items:center;height:52px}
+.full .wave i{width:5px;border-radius:3px;background:#fff;opacity:.9;animation:wave 1s ease-in-out infinite}
 /* toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));animation:tdrop .25s ease-out;z-index:50;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:14px;align-items:center;width:min(408px,calc(100% - 32px));font-size:14px;box-shadow:0 8px 24px var(--shadow)}
 .toast button{color:var(--pri-sub);font-weight:700;white-space:nowrap}
@@ -292,6 +303,7 @@ h1.q{font-size:30px;line-height:1.12}
   <nav class="tabs" id="tabs" aria-label="Secciones"></nav>
 </div>
 <div id="layer"></div>
+<input type="file" id="syl-file" accept="application/pdf,image/*" hidden>
 <div id="toastbox"></div>
 
 <script src="/lib/supabase.js"></script>
@@ -583,6 +595,7 @@ const I={
  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 17h-19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.5"/></svg>',
  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+ clip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7L14 4.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3L15 7.5"/></svg>',
  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'};
 const AV=(s=32)=>`<span class="av" style="width:${s}px;height:${s}px">${I.spark}</span>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -663,7 +676,7 @@ function vOnboarding(){const s=ui.ob;
     state.commitments.length?`<button class="btn pri" data-a="ob-next">Continuar</button>`:`<button class="btn pri" data-a="ob-need" data-m="Agrega al menos un compromiso: clases o trabajo.">Continuar</button>`);
   if(s===4)return obShell(4,`<span class="step-k">Paso 4 de 4</span><h1 class="q">¿Qué exámenes y entregas se vienen?</h1><p class="muted">Lía calcula cuántas horas necesitas para cada uno.</p>
     ${voiceCard('eval','“Parcial de Cálculo el jueves a las 9”')}
-    <div class="chips">${['parcial','final','practica','entrega'].map(k=>`<button class="chip" data-a="chip-eval" data-type="${k}">${I.plus} ${EVAL_TYPES[k].label}</button>`).join('')}</div>
+    <div class="chips"><button class="chip" data-a="syllabus" data-from="syllabus-ob" style="border-color:var(--pri);color:var(--pri)">${I.clip} Subir mi sílabo</button>${['parcial','final','practica','entrega'].map(k=>`<button class="chip" data-a="chip-eval" data-type="${k}">${I.plus} ${EVAL_TYPES[k].label}</button>`).join('')}</div>
     <div class="stack">${state.evals.map(evalItem).join('')}</div>`,
     state.evals.length?`<button class="btn pri" data-a="ob-next">Armar mi horario</button>`:`<button class="btn pri" data-a="ob-need" data-m="Agrega al menos una evaluación.">Armar mi horario</button>`);
   const p=P();const tot=p.blocks.reduce((a,b)=>a+b.e-b.s,0);const falt=state.evals.filter(e=>p.unmet[e.id]>0);
@@ -725,16 +738,16 @@ function vEvals(){const t=ymd(now());const up=state.evals.filter(e=>e.date>=t).s
   <button class="dashed" data-a="add-eval">${I.plus.replace('<svg','<svg class="ico"')}<span class="grow">Agregar evaluación</span></button></div>
   ${past.length?`<h2>Pasadas</h2><div class="stack past">${past.map(evalItem).join('')}</div>`:''}`;}
 
-function vLia(){const ph='Escribe o toca el micrófono…';
-  const sug=['¿Qué tengo mañana?','Hoy salgo del trabajo a las 9','Parcial de Estadística el viernes a las 10','Libera mi sábado','¿Cuánto me falta?'];
-  return `<div class="row-h">${AV(40)}<div class="grow"><b>Lía</b><div class="small" style="color:var(--ok)">Tu secretaria · versión sin IA (entiende frases simples)</div></div></div>
-  <div class="chat" id="chat">${state.chat.slice(-30).map((m,i,a)=>msgHTML(m,i===a.length-1)).join('')}${ui.pending?pendingHTML():''}</div>
-  <div class="chips">${sug.map(s=>`<button class="pill ghost" data-a="chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
-  <form class="inbar" data-form="chat"><input id="chat-in" name="q" placeholder="${ph}" autocomplete="off"><button type="button" class="mic" data-a="mic" data-target="chat-in" aria-label="Hablar con Lía">${I.mic}</button></form>`;}
-function msgHTML(m,last){return m.from==='me'?`<div class="msg me"><div class="bub">${esc(m.text)}</div></div>`:`<div class="msg">${AV(28)}<div class="bub">${esc(m.text)}${m.undo&&last&&undoStack?`<button class="pill ghost" data-a="undo" style="align-self:flex-start">Deshacer</button>`:''}</div></div>`;}
+function vLia(){const ph='Escríbele a Lía…';const on=liaOnline();
+  const sug=['¿Qué tengo mañana?','Hoy salgo del trabajo a las 9','¿Cuánto me falta para mi próximo examen?','Libera mi sábado'];
+  return `<div class="row-h">${AV(40)}<div class="grow"><b>Lía</b><div class="small" style="color:${on?'var(--ok)':'var(--mute)'}">${on?'Tu secretaria con IA · en línea':'Sin conexión · entiende frases simples'}</div></div></div>
+  <div class="chat" id="chat">${state.chat.slice(-30).map((m,i,a)=>msgHTML(m,i===a.length-1)).join('')}${ui.pending?pendingHTML():''}${ui.thinking?`<div class="msg">${AV(28)}<div class="bub typing" aria-label="Lía está escribiendo"><i></i><i></i><i></i></div></div>`:''}</div>
+  ${ui.thinking||ui.pending?'':`<div class="chips">${sug.map(s=>`<button class="pill ghost" data-a="chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}<button class="pill" data-a="syllabus" data-from="syllabus-chat">${I.clip} Subir sílabo</button></div>`}
+  <form class="inbar" data-form="chat"><button type="button" class="iconbtn" data-a="syllabus" data-from="syllabus-chat" aria-label="Subir sílabo">${I.clip}</button><input id="chat-in" name="q" placeholder="${ph}" autocomplete="off" enterkeyhint="send"><button type="button" class="mic" data-a="mic" data-target="chat-in" aria-label="Hablar con Lía">${I.mic}</button></form>`;}
+function msgHTML(m,last){return m.from==='me'?`<div class="msg me"><div class="bub">${m.voice?`<span class="vtag">${I.mic} Nota de voz</span>`:''}${m.file?`<span class="vtag">${I.clip} Archivo</span>`:''}${esc(m.text)}</div></div>`:`<div class="msg">${AV(28)}<div class="bub">${esc(m.text)}${m.undo&&last&&undoStack?`<button class="pill ghost" data-a="undo" style="align-self:flex-start">Deshacer</button>`:''}</div></div>`;}
 function itemLine(it){if(it.kind==='eval')return `${EVAL_TYPES[it.type].label} · ${it.course} — ${fechaCorta(it.date)} ${it.time} (${it.hours} h de estudio)`;
   return `${it.name} — ${diasTxt(it.days)} · ${it.start} – ${it.end}`;}
-function pendingHTML(){const it=ui.pending.items;return `<div class="msg">${AV(28)}<div class="bub"><span class="eyebrow">Lía entendió</span>${it.map(i=>`<div class="blk ${i.kind==='eval'?(i.type==='entrega'?'k-trabajo':'k-examen'):'k-'+i.type}"><b>${esc(i.kind==='eval'?EVAL_TYPES[i.type].label+' · '+i.course:i.name)}</b><small>${esc(i.kind==='eval'?`${cap(fechaCorta(i.date))} · ${i.time} · ${i.hours} h de estudio`:`${diasTxt(i.days)} · ${i.start} – ${i.end}`)}</small></div>`).join('')}
+function pendingHTML(){const it=ui.pending.items||[];const xs=ui.pending.exs||(ui.pending.ex?[ui.pending.ex]:[]);return `<div class="msg">${AV(28)}<div class="bub"><span class="eyebrow">¿Lo guardo?</span>${xs.map(x=>`<div class="blk k-excepcion"><b>${esc(x.label)}</b><small>${esc(cap(fechaCorta(x.date)))} · ${x.start} – ${x.end}</small></div>`).join('')}${it.map(i=>`<div class="blk ${i.kind==='eval'?(i.type==='entrega'?'k-trabajo':'k-examen'):'k-'+i.type}"><b>${esc(i.kind==='eval'?EVAL_TYPES[i.type].label+' · '+i.course:i.name)}</b><small>${esc(i.kind==='eval'?`${cap(fechaCorta(i.date))} · ${i.time} · ${i.hours} h de estudio`:`${diasTxt(i.days)} · ${i.start} – ${i.end}`)}</small></div>`).join('')}
    <div class="row-h"><button class="pill solid" data-a="confirm">Confirmar</button><button class="pill ghost" data-a="cancel">Corregir</button></div></div></div>`;}
 
 function vPerfil(){const S=state.settings,p=P();const covered=state.evals.filter(e=>e.date>=ymd(now())&&!p.unmet[e.id]).length,up=state.evals.filter(e=>e.date>=ymd(now())).length;
@@ -793,7 +806,11 @@ function vSession(){const s=ui.session;const e=evById(s.ev);const left=Math.max(
   <div style="flex:1"></div>
   <div class="two" style="width:100%"><button class="btn light" data-a="sess-pause">${s.running?'Pausar':'Seguir'}</button><button class="btn pri" data-a="sess-done">Terminé</button></div></div></div>`;}
 const clk=ms=>{const t=Math.ceil(ms/1000);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?`${h}:${pad(m)}:${pad(s)}`:`${pad(m)}:${pad(s)}`;};
-function vListen(){return `<div class="full"><div class="in"><div class="top"><button data-a="listen-cancel" style="color:inherit">Cancelar</button><button data-a="listen-type" style="color:inherit">Prefiero escribir</button></div>
+function vListen(){if(ui.listen.rec){const think=ui.listen.phase==='think';return `<div class="full"><div class="in"><div class="top">${think?'<span></span>':'<button data-a="listen-cancel" style="color:inherit">Cancelar</button>'}${think?'':'<button data-a="listen-type" style="color:inherit">Prefiero escribir</button>'}</div>
+  <div style="flex:1"></div><div class="halo">${AV(80)}</div><span class="eyebrow" style="color:#B9B8FF">${think?'Lía está entendiendo…':'Lía te escucha…'}</span>
+  <div class="transcript">${think?'Un momento':'Habla ahora'}</div>${think?'':`<div class="wave">${[14,26,40,22,48,30,18,36,24].map((h,i)=>`<i style="height:${h}px;animation-delay:${i*90}ms"></i>`).join('')}</div><span class="small tnum" id="rec-time" style="opacity:.7">0:00 / 0:${MAX_REC}</span>`}<div style="flex:1"></div>
+  ${think?'':`<button class="stopb" data-a="listen-stop" aria-label="Terminar"><i></i></button><span class="small" style="opacity:.6">Toca cuando termines de hablar</span>`}</div></div>`;}
+  return `<div class="full"><div class="in"><div class="top"><button data-a="listen-cancel" style="color:inherit">Cancelar</button><button data-a="listen-type" style="color:inherit">Prefiero escribir</button></div>
   <div style="flex:1"></div><div class="halo">${AV(80)}</div><span class="eyebrow" style="color:#B9B8FF">Lía te escucha…</span>
   <div class="transcript" id="live">${esc(ui.listen.text||'Habla ahora')}</div><div style="flex:1"></div>
   <button class="stopb" data-a="listen-stop" aria-label="Terminar"><i></i></button><span class="small" style="opacity:.6">Toca para terminar</span></div></div>`;}
@@ -886,6 +903,138 @@ function applyException(ex){const p0=P();snapshot();state.exceptions.push({id:ui
   else msg+=' No chocaba con tu estudio.';
   msg+=` Igual duermes a las ${state.settings.sleep}.`;liaSay(msg,{undo:true});ui.pending=null;render();}
 
+// ---------- Lía con IA ----------
+const validDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(fromYmd(s));
+const validTime=s=>typeof s==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+const nrm=s=>norm(String(s||'')).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+function findEvalByCourse(c){const q=nrm(c);if(!q)return null;const up=state.evals.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  return up.find(e=>nrm(e.course)===q)||up.find(e=>nrm(e.course).includes(q)||q.includes(nrm(e.course)))||null;}
+function buildContext(){const n=now(),S=state.settings,p=P(),t=ymd(n);const L=[];
+  L.push(`Nombre: ${S.name||'(sin nombre)'}. Duerme de ${S.sleep} a ${S.wake}. Máximo de estudio al día: ${hrs(S.maxDay)}.`);
+  L.push('Compromisos fijos:');if(!state.commitments.length)L.push('- (ninguno)');
+  for(const c of state.commitments)L.push(`- ${c.name} (${c.type}): ${diasTxt(c.days)} ${c.start}-${c.end}`);
+  L.push('Evaluaciones:');const evs=state.evals.filter(e=>e.date>=ymd(addDays(n,-3))).sort((a,b)=>a.date.localeCompare(b.date));if(!evs.length)L.push('- (ninguna)');
+  for(const e of evs)L.push(`- ${EVAL_TYPES[e.type].label} · ${e.course}: ${DIAS[fromYmd(e.date).getDay()]} ${e.date} ${e.time}; necesita ${e.hours} h; ya estudió ${hrs(doneFor(state,e.id))}; ${p.unmet[e.id]>0?'faltan '+hrs(p.unmet[e.id])+' sin hueco libre':'tiempo de estudio cubierto'}`);
+  L.push('Agenda calculada por la app para los próximos 7 días:');
+  for(let i=0;i<7;i++){const d=ymd(addDays(n,i));const it=agendaFor(state,p,d);L.push(`- ${DIAS[fromYmd(d).getDay()]} ${d}: ${it.map(x=>`${fmt(x.s)}-${fmt(x.e)} ${x.label}`).join('; ')||'libre'}`);}
+  return L.join('\n');}
+const liaOnline=()=>!!(sb&&auth.uid&&navigator.onLine);
+async function callLia(payload){
+  if(!sb||!auth.uid)throw{userMsg:'Inicia sesión para hablar con Lía.'};
+  if(!navigator.onLine)throw{userMsg:'Sin conexión. Lía necesita internet para entenderte.',offline:true};
+  const n=now();
+  const body={text:payload.text||'',audio:payload.audio||null,file:payload.file||null,today:ymd(n),weekday:DIAS[n.getDay()],
+    time:fmt(n.getHours()*60+n.getMinutes()),context:buildContext(),history:payload.history||[]};
+  let res;
+  try{res=await sb.functions.invoke('lia',{body});}catch(e){throw{userMsg:'No pude conectarme con Lía. Revisa tu internet.',offline:true};}
+  const {data,error}=res;
+  if(error){const st=error.context&&error.context.status;let msg='Lía no está disponible en este momento. Inténtalo en un rato.';
+    if(st===404)msg='Lía todavía no está instalada en el servidor.';
+    else if(st===429)msg='Lía recibió muchas consultas hoy. Vuelve a intentarlo en un rato.';
+    else if(st===401)msg='Tu sesión venció. Cierra sesión y vuelve a entrar.';
+    else if(st===413)msg='El archivo es muy grande. Prueba con uno más liviano o con una foto.';
+    else if(!st)msg='No pude conectarme con Lía. Revisa tu internet.';
+    try{const j=await error.context.json();if(j&&j.error&&/GEMINI_API_KEY/.test(j.error))msg='Falta configurar la clave de Gemini en Supabase.';}catch(e){}
+    throw{userMsg:msg,status:st,offline:!st};}
+  if(!data||typeof data.reply!=='string')throw{userMsg:'Lía no pudo responder. Inténtalo de nuevo.'};
+  return data;}
+function liaActions(res){const items=[],exs=[],ops=[];
+  for(const a of Array.isArray(res.actions)?res.actions:[]){if(!a||typeof a!=='object')continue;
+    if(a.type==='add_eval'&&validDate(a.date)){const ty=EVAL_TYPES[a.eval_type]?a.eval_type:'parcial';
+      items.push({kind:'eval',type:ty,course:String(a.course||'Curso').trim().slice(0,60)||'Curso',date:a.date,time:validTime(a.time)?a.time:(ty==='entrega'?'23:59':'09:00'),hours:Math.min(40,Math.max(.5,+a.hours||EVAL_TYPES[ty].h))});}
+    else if(a.type==='add_commitment'&&Array.isArray(a.days)&&validTime(a.start)&&validTime(a.end)&&toMin(a.end)>toMin(a.start)){
+      const days=[...new Set(a.days.map(Number).filter(d=>d>=0&&d<=6))];if(!days.length)continue;const k=COMMIT_TYPES[a.kind]?a.kind:'otro';
+      items.push({kind:'commit',type:k,name:String(a.name||COMMIT_TYPES[k]).trim().slice(0,40)||COMMIT_TYPES[k],days,start:a.start,end:a.end});}
+    else if(a.type==='block_time'&&validDate(a.date)&&validTime(a.start)&&validTime(a.end)&&toMin(a.end)>toMin(a.start))exs.push({date:a.date,start:a.start,end:a.end,label:String(a.label||'No disponible').slice(0,40)});
+    else if(a.type==='free_day'&&validDate(a.date))exs.push({date:a.date,start:state.settings.wake,end:state.settings.sleep,label:'Día libre'});
+    else if(a.type==='delete_eval'||a.type==='mark_done')ops.push(a);}
+  return{items,exs,ops};}
+function movesMsg(p0,exs){const p1=P();const days=new Set(exs.map(x=>x.date));
+  const lost=p0.blocks.filter(b=>exs.some(x=>x.date===b.date&&b.s<toMin(x.end)&&b.e>toMin(x.start)));
+  if(!lost.length)return'';const moved=p1.blocks.filter(b=>days.has(b.date)&&!p0.blocks.some(x=>x.date===b.date&&x.s===b.s&&x.evalId===b.evalId));
+  const g={};for(const b of moved){const e=evById(b.evalId);if(e)(g[e.course]=g[e.course]||[]).push(fmt(b.s));}
+  return moved.length?` Moví ${Object.entries(g).map(([c,ts])=>`${c} a las ${ts.join(' y ')}`).join('; ')}.`:' Reacomodé tus bloques de estudio en otros días.';}
+function applyAll(items,exs,ops){const p0=P();snapshot();
+  for(const it of items){if(it.kind==='eval')state.evals.push({id:uid(),type:it.type,course:it.course,date:it.date,time:it.time,hours:it.hours});
+    else state.commitments.push({id:uid(),name:it.name,type:it.type,days:it.days,start:it.start,end:it.end});}
+  for(const x of exs)state.exceptions.push({id:uid(),...x});
+  const notes=[];
+  for(const a of ops||[]){const e=findEvalByCourse(a.course);if(!e){notes.push(`No encontré la evaluación de ${a.course||'ese curso'}.`);continue;}
+    if(a.type==='delete_eval'){state.evals=state.evals.filter(x=>x.id!==e.id);state.done=state.done.filter(x=>x.evalId!==e.id);}
+    else{const min=Math.min(600,Math.max(5,Math.round(+a.minutes||30)));const n=now();state.done.push({id:uid(),evalId:e.id,date:ymd(n),start:fmt(Math.max(0,n.getHours()*60+n.getMinutes()-min)),min});}}
+  save();return movesMsg(p0,exs)+(notes.length?' '+notes.join(' '):'');}
+async function askLia(payload,from){
+  // from: 'chat' | 'commit' | 'eval' | 'syllabus-chat' | 'syllabus-ob'
+  const inChat=from==='chat'||from==='syllabus-chat';
+  if(inChat){if(payload.text)state.chat.push({from:'me',text:payload.text});if(payload.file)state.chat.push({from:'me',text:`Sílabo: ${payload.file.name||'archivo'}`,file:true});
+    ui.thinking=true;ui.pending=null;save();if(ui.tab!=='lia'){ui.tab='lia';}render();}
+  else ui.busy=true,toast(payload.file?'Lía está leyendo tu sílabo…':'Lía está entendiendo…');
+  const history=inChat?state.chat.slice(-10,-1).filter(m=>!m.file).map(m=>({from:m.from,text:m.text})):[];
+  let res;
+  try{res=await callLia({...payload,history});}
+  catch(e){ui.thinking=false;ui.busy=false;
+    if(payload.text&&e.offline){ if(inChat)state.chat.pop(); handleText(payload.text,from==='chat'?'chat':from); return;}
+    if(inChat){liaSay(e.userMsg||'Algo falló. Inténtalo de nuevo.');render();}else{toast(e.userMsg||'Algo falló. Inténtalo de nuevo.');}
+    return;}
+  ui.thinking=false;ui.busy=false;
+  if(payload.audio&&res.transcript&&inChat)state.chat.push({from:'me',text:String(res.transcript).slice(0,500),voice:true});
+  const {items,exs,ops}=liaActions(res);
+  const reply=(res.reply||'').trim();
+  if(!inChat){ // registro inicial y campos de dictado: se aplica directo, con deshacer
+    if(!items.length&&!exs.length){toast(reply||'No te entendí. Inténtalo con otras palabras.');rerenderKeepScroll();return;}
+    applyAll(items,exs,ops);rerenderKeepScroll();
+    toast(items.length?`Lía agregó: ${items.map(i=>i.kind==='eval'?i.course:i.name).join(', ')}`:reply,true);return;}
+  const needConfirm=items.length>0||(exs.length>0&&state.settings.autonomy==='ask');
+  if(needConfirm){liaSay(reply||'Esto es lo que entendí. ¿Lo guardo?');ui.pending={items,exs,ops};render();return;}
+  if(exs.length||ops.length){const extra=applyAll([],exs,ops);liaSay((reply||'Listo.')+extra,{undo:true});render();return;}
+  liaSay(reply||'No te entendí bien. ¿Me lo dices de otra forma?');render();}
+
+// ---------- Grabar audio (funciona en Android y iPhone, instalada o no) ----------
+let mediaRec=null,recChunks=[],recStream=null,recTick=null;
+const MAX_REC=30;
+async function startRecording(target){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder||!liaOnline()){startMic(target);return;}
+  try{recStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
+  catch(e){toast(e&&e.name==='NotAllowedError'?'LIA necesita permiso para usar el micrófono. Actívalo en los ajustes del navegador.':'No se pudo usar el micrófono de este teléfono.');return;}
+  recChunks=[];try{mediaRec=new MediaRecorder(recStream);}catch(e){recStream.getTracks().forEach(t=>t.stop());startMic(target);return;}
+  mediaRec.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data);};
+  mediaRec.onstop=onRecStop;mediaRec.start(250);haptic();
+  ui.listen={target,rec:true,phase:'rec',t0:Date.now(),use:false};render();
+  clearInterval(recTick);recTick=setInterval(()=>{if(!ui.listen||!ui.listen.rec){clearInterval(recTick);return;}
+    const s=Math.floor((Date.now()-ui.listen.t0)/1000);const el=document.getElementById('rec-time');if(el)el.textContent=`0:${pad(s)} / 0:${MAX_REC}`;
+    if(s>=MAX_REC)stopRecording(true);},250);}
+function stopRecording(use){if(!ui.listen||!ui.listen.rec)return;ui.listen.use=use;clearInterval(recTick);
+  try{if(mediaRec&&mediaRec.state!=='inactive')mediaRec.stop();}catch(e){}try{recStream&&recStream.getTracks().forEach(t=>t.stop());}catch(e){}
+  if(use){ui.listen.phase='think';render();}}
+async function onRecStop(){const L=ui.listen;if(!L||!L.use){ui.listen=null;render();return;}
+  const target=L.target;const from=target==='chat-in'?'chat':target==='dict-commit'?'commit':'eval';
+  try{const blob=new Blob(recChunks,{type:(mediaRec&&mediaRec.mimeType)||'audio/webm'});
+    if(blob.size<1500)throw new Error('corto');
+    const wav=await toWav16k(blob);const data=await blobToB64(wav);ui.listen=null;render();
+    await askLia({audio:{mime:'audio/wav',data}},from);}
+  catch(e){ui.listen=null;render();toast(e&&e.message==='corto'?'No escuché nada. Mantén el teléfono cerca y vuelve a intentar.':'No pude procesar el audio. Inténtalo de nuevo o escríbelo.');}}
+async function toWav16k(blob){const buf=await blob.arrayBuffer();const AC=window.AudioContext||window.webkitAudioContext;const ac=new AC();
+  const audio=await new Promise((res,rej)=>{const p=ac.decodeAudioData(buf,res,rej);if(p&&p.then)p.then(res,rej);});try{ac.close();}catch(e){}
+  const rate=16000,len=Math.max(1,Math.ceil(audio.duration*rate));const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  const oac=new OAC(1,len,rate);const src=oac.createBufferSource();src.buffer=audio;src.connect(oac.destination);src.start(0);
+  const out=await new Promise((res,rej)=>{oac.oncomplete=e=>res(e.renderedBuffer);const p=oac.startRendering();if(p&&p.then)p.then(res,rej);});
+  const d=out.getChannelData(0);const b=new ArrayBuffer(44+d.length*2);const v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');v.setUint32(4,36+d.length*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,d.length*2,true);
+  for(let i=0;i<d.length;i++){const x=Math.max(-1,Math.min(1,d[i]));v.setInt16(44+i*2,x<0?x*0x8000:x*0x7FFF,true);}
+  return new Blob([b],{type:'audio/wav'});}
+function blobToB64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=rej;r.readAsDataURL(blob);});}
+
+// ---------- Sílabo (PDF o foto) ----------
+let sylFrom='syllabus-chat';
+function pickSyllabus(from){if(!liaOnline()){toast('Necesitas internet e iniciar sesión para que Lía lea tu sílabo.');return;}
+  sylFrom=from;const inp=document.getElementById('syl-file');if(inp){inp.value='';inp.click();}}
+async function onSyllabusFile(file){if(!file)return;
+  if(file.size>4.5*1024*1024){toast('El archivo pesa más de 4.5 MB. Prueba con una foto o un PDF más liviano.');return;}
+  const ok=/pdf$/i.test(file.type)||/^image\//.test(file.type)||/\.pdf$/i.test(file.name);if(!ok){toast('Sube un PDF o una foto del sílabo.');return;}
+  const data=await blobToB64(file);
+  await askLia({file:{mime:file.type||'application/pdf',data,name:file.name}},state.onboarded?sylFrom:'syllabus-ob');}
+
 const A={
  tab:d=>{if(ui.tab!==d.t)haptic();const ch=ui.tab!==d.t;ui.tab=d.t;ui.sheet=null;render();const v=document.getElementById('view');v.scrollTop=0;if(ch){v.classList.remove('enter');void v.offsetWidth;v.classList.add('enter');}},
  'start-own':()=>{haptic();ui.welcome=false;ui.auth='signup';render();},
@@ -920,8 +1069,11 @@ const A={
  'sess-exit':()=>{ui.session=null;try{ui.wl&&ui.wl.release();}catch(e){}render();},
  wk:d=>{ui.weekOffset+=+d.v;ui.sel=null;render();},
  sel:d=>{ui.sel=d.d;rerenderKeepScroll();},
- chip:d=>{handleText(d.q,'chat');},
- confirm:()=>{const p=ui.pending;ui.pending=null;if(p.ex){applyException(p.ex);return;}applyItems(p.items);const P1=P();
+ chip:d=>{haptic();if(liaOnline())askLia({text:d.q},'chat');else handleText(d.q,'chat');},
+ syllabus:d=>{haptic();pickSyllabus(d.from||'syllabus-chat');},
+ confirm:()=>{const p=ui.pending;ui.pending=null;haptic();if(p.ex){applyException(p.ex);return;}
+   if(p.exs||p.ops){const extra=applyAll(p.items||[],p.exs||[],p.ops||[]);const P1=P();liaSay(`Listo, guardado.${extra} Ahora tienes ${hrs(P1.blocks.reduce((a,b)=>a+b.e-b.s,0))} de estudio repartidas en tus horas libres.`,{undo:true});render();return;}
+   applyItems(p.items);const P1=P();
    liaSay(`Listo, agregué ${p.items.map(i=>i.kind==='eval'?`${EVAL_TYPES[i.type].label.toLowerCase()} de ${i.course}`:i.name.toLowerCase()).join(' y ')}. Ahora tienes ${hrs(P1.blocks.reduce((a,b)=>a+b.e-b.s,0))} de estudio repartidas en tus horas libres.`,{undo:true});render();},
  cancel:()=>{ui.pending=null;liaSay('Ok, no guardé nada. Dímelo de nuevo con más detalle o agrégalo a mano en Evaluaciones o Perfil.');render();},
  undo:()=>undo(),
@@ -930,10 +1082,10 @@ const A={
  scrim:(d,el,ev)=>{if(ev.target===el){ui.sheet=null;render();}},
  'ask-reset':()=>{ui.sheet=sheetReset();render();},
  reset:()=>{const name=state.settings.name;state=emptyState();state.settings.name=name;save();ui.ob=1;ui.sheet=null;ui.tab='hoy';render();toast('Listo, empecemos de nuevo.');},
- mic:d=>startMic(d.target),
- 'listen-stop':()=>{stopMic(true);},
- 'listen-cancel':()=>{stopMic(false);},
- 'listen-type':()=>{const t=ui.listen&&ui.listen.target;stopMic(false);const el=document.getElementById(t);if(el){el.focus();}},
+ mic:d=>startRecording(d.target),
+ 'listen-stop':()=>{if(ui.listen&&ui.listen.rec)stopRecording(true);else stopMic(true);},
+ 'listen-cancel':()=>{if(ui.listen&&ui.listen.rec)stopRecording(false);else stopMic(false);},
+ 'listen-type':()=>{const t=ui.listen&&ui.listen.target;if(ui.listen&&ui.listen.rec)stopRecording(false);else stopMic(false);const el=document.getElementById(t);if(el){el.focus();}},
 };
 document.addEventListener('click',ev=>{const el=ev.target.closest('[data-a]');if(!el)return;const f=A[el.dataset.a];if(!f)return;
   if(el.dataset.a==='scrim'){f(el.dataset,el,ev);return;}ev.preventDefault();f(el.dataset,el,ev);});
@@ -943,7 +1095,9 @@ document.addEventListener('submit',ev=>{const f=ev.target;ev.preventDefault();co
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(er){er.hidden=false;er.textContent='Escribe un correo válido.';}return;}
     if(pass.length<6){if(er){er.hidden=false;er.textContent='La contraseña debe tener al menos 6 caracteres.';}return;}
     doAuth(email,pass);return;}
-  if(f.dataset.form==='chat'||f.dataset.form==='dictar'){const q=fd.get('q')||'';handleText(String(q),f.dataset.form==='chat'?'chat':f.dataset.kind);return;}
+  if(f.dataset.form==='chat'||f.dataset.form==='dictar'){const q=String(fd.get('q')||'').trim();if(!q)return;const from=f.dataset.form==='chat'?'chat':f.dataset.kind;
+    const inp=f.querySelector('input[name=q]');if(inp)inp.value='';
+    if(liaOnline())askLia({text:q},from);else handleText(q,from);return;}
   if(f.dataset.form==='commit'){const days=fd.getAll('d').map(Number);if(!days.length){toast('Elige al menos un día.');return;}
     if(toMin(fd.get('end'))<=toMin(fd.get('start'))){toast('La hora de fin debe ser después del inicio.');return;}
     snapshot();const o={name:String(fd.get('name')).trim(),type:fd.get('type'),days,start:fd.get('start'),end:fd.get('end')};
@@ -954,6 +1108,7 @@ document.addEventListener('submit',ev=>{const f=ev.target;ev.preventDefault();co
     save();ui.sheet=null;const p=P();const e=state.evals.find(x=>x.course===o.course&&x.date===o.date);rerenderKeepScroll();
     toast(e&&p.unmet[e.id]>0?`Guardado, pero faltan ${hrs(p.unmet[e.id])} sin hueco libre.`:'Guardado. Lía repartió tus horas de estudio.',true);}});
 document.addEventListener('change',ev=>{const el=ev.target;
+  if(el.id==='syl-file'){onSyllabusFile(el.files&&el.files[0]);return;}
   if(el.id==='e-type'){const h=document.getElementById('e-hours');if(h)h.value=EVAL_TYPES[el.value].h;return;}
   const k=el.dataset&&el.dataset.set;if(!k)return;let v=el.value;if(k==='maxDay'||k==='block')v=+v;
   if((k==='wake'||k==='sleep')&&!v)return;state.settings[k]=v;save();

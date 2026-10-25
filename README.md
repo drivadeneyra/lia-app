@@ -18,9 +18,14 @@ App web instalable (PWA) para universitarios que estudian y trabajan: registra t
 - La tabla `subscriptions` guarda el plan (gratis / pro). Solo se cambia desde el panel de Supabase.
 - Configuración inicial de la base de datos: `supabase/001_inicio.sql` (pegar en SQL Editor y ejecutar).
 
+## Lía con IA (Gemini)
+
+- Función `supabase/functions/lia/index.ts` (Supabase Edge Function). Recibe texto, audio o sílabo (PDF/foto) más el contexto del horario y devuelve acciones en JSON.
+- La clave vive en Supabase → Edge Functions → Secrets como `GEMINI_API_KEY`. Opcional: `GEMINI_MODEL` para fijar un modelo.
+- Sin conexión, la app usa su lector de frases local como respaldo.
+
 ## Próximos pasos
 
-1. Lía con IA (Gemini) y lectura de sílabos en PDF.
 2. Notificaciones antes de cada bloque.
 3. Plan Pro y pagos (Yape / Mercado Pago).
 
