@@ -41,7 +41,14 @@
 html,body{height:100%}
 [hidden]{display:none!important}
 body.wm{background:#3D3BF3}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-font-smoothing:antialiased}
+input,textarea,.bub{-webkit-user-select:text;user-select:text}
+button,a,label{touch-action:manipulation}
+button,.item,.ag,.day,.chip,.tab{transition:transform .12s ease,opacity .12s ease}
+button:active:not(:disabled),.item:active,.ag:active,.chip:active{transform:scale(.97)}
+.tab:active{transform:scale(.92)}
+main.enter>*{animation:enter .28s ease-out both}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 *{box-sizing:border-box}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none;padding:0;text-align:inherit}
@@ -50,7 +57,7 @@ button{cursor:pointer;border:0;background:none;padding:0;text-align:inherit}
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 main{flex:1;overflow-y:auto;overflow-x:hidden;padding-block:16px 24px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none}
 main::-webkit-scrollbar{display:none}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;padding-block:8px 10px;border-top:1px solid var(--line);background:var(--bg)}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;padding-block:8px 6px;border-top:1px solid var(--line);background:var(--bg)}
 .tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:500;color:var(--mute);padding-block:4px}
 .tab svg{width:24px;height:24px}
 .tab[aria-current="page"]{color:var(--pri);font-weight:600}
@@ -140,7 +147,7 @@ h2{font-size:17px;margin:0;font-weight:600}
 .msg.me .bub{background:var(--pri);color:var(--pri-ink);border-color:var(--pri);border-radius:16px 16px 4px 16px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .inbar{display:flex;gap:10px;align-items:center;padding-block:8px}
-.inbar input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:24px;padding:13px 16px}
+.inbar input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:24px;padding:13px 16px;font-size:16px}
 .inbar .mic{width:48px;height:48px}
 .inbar .mic svg{width:22px;height:22px}
 /* forms */
@@ -189,8 +196,89 @@ label.f input,label.f select{border:1px solid var(--line);background:var(--surfa
 .steps{display:flex;gap:6px}.steps i{flex:1;height:6px;border-radius:3px;background:var(--line)}.steps i.on{background:var(--pri)}
 .check{width:24px;height:24px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;flex:none}
 .check svg{width:14px;height:14px}
+/* splash */
+.splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(120% 90% at 20% 10%,#5B59FF 0%,#3D3BF3 45%,#7A3FF0 100%);color:#fff;transition:opacity .4s ease}
+.splash.out{opacity:0;pointer-events:none}
+.splash-in{display:flex;flex-direction:column;align-items:center;gap:14px;animation:pop .6s cubic-bezier(.2,.9,.3,1.2) both}
+.splash-in b{font-size:28px;letter-spacing:.12em}
+@keyframes pop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
+/* welcome carousel */
+.obw{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;color:#fff;background:radial-gradient(120% 80% at 15% 0%,#5B59FF 0%,#3D3BF3 45%,#6A3CF2 80%,#8E4BF6 100%);
+  padding-top:max(14px,env(safe-area-inset-top,0px));padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
+.obw-top{display:flex;justify-content:space-between;align-items:center;padding:6px max(24px,env(safe-area-inset-left,0px)) 0}
+.obw .logo svg{width:22px;height:22px}
+.skip{color:#fff;opacity:.8;font-weight:600;font-size:15px;padding:8px}
+.slides{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.slides::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;padding:0 28px;max-width:100%}
+.art-wrap{flex:1;display:grid;place-items:center;min-height:0}
+.copy{display:flex;flex-direction:column;gap:10px;padding-bottom:8px}
+.copy h1{color:#fff;font-size:30px}
+.copy p{margin:0;opacity:.85;font-size:16px;line-height:1.45}
+.obw-bottom{display:flex;flex-direction:column;gap:10px;padding:8px max(24px,env(safe-area-inset-left,0px)) 0}
+.dots{display:flex;gap:8px;justify-content:flex-start;padding:4px 4px 10px}
+.dots button{width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.4);transition:width .25s ease,background .25s}
+.dots button.on{width:24px;background:#fff}
+.wbtn{background:#fff;color:#3D3BF3}
+.wlink{color:#fff;opacity:.85;font-weight:600;padding:10px;text-align:center}
+.art{position:relative;display:grid;place-items:center}
+.art1{width:240px;height:240px}
+.art1 .ring{position:absolute;border-radius:50%;border:1.5px solid rgba(255,255,255,.25)}
+.art1 .r1{inset:0;animation:breathe 3s ease-in-out infinite}.art1 .r2{inset:36px;background:rgba(255,255,255,.08);animation:breathe 3s ease-in-out .4s infinite}
+.art1 .av{box-shadow:0 16px 50px rgba(20,10,80,.45);border:3px solid rgba(255,255,255,.35)}
+.bubble{position:absolute;right:-12px;top:22px;background:#fff;color:#1C1B29;font-weight:600;font-size:14px;padding:10px 14px;border-radius:16px 16px 16px 4px;box-shadow:0 10px 30px rgba(20,10,80,.3);animation:float 3.2s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.05);opacity:.7}}
+@keyframes float{50%{transform:translateY(-6px)}}
+.mini{width:min(300px,78vw);background:#fff;border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:8px;color:#1C1B29;box-shadow:0 20px 60px rgba(20,10,80,.4);transform:rotate(-2deg)}
+.mini .k-clase{background:#E8EBF2;color:#1C1B29}.mini .k-trabajo{background:#FFE6BA;color:#5A3B00}.mini .k-estudio{background:#3D3BF3;color:#fff;position:relative}
+.slide[aria-hidden="false"] .mini .blk{animation:slidein .5s ease-out both}
+.slide[aria-hidden="false"] .mini .blk:nth-of-type(2){animation-delay:.12s}.slide[aria-hidden="false"] .mini .blk:nth-of-type(3){animation-delay:.24s}.slide[aria-hidden="false"] .mini .blk:nth-of-type(4){animation-delay:.36s}
+@keyframes slidein{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.flag{position:absolute;right:10px;top:-12px;background:#FFE6BA;color:#5A3B00;font-size:11px;font-weight:700;padding:4px 8px;border-radius:8px;display:flex;gap:4px;align-items:center}
+.flag svg{width:12px;height:12px}
+.art3{gap:22px}
+.micbig{width:112px;height:112px;border-radius:50%;background:#fff;color:#3D3BF3;display:grid;place-items:center;box-shadow:0 0 0 14px rgba(255,255,255,.12),0 0 0 30px rgba(255,255,255,.06),0 16px 50px rgba(20,10,80,.4)}
+.micbig svg{width:48px;height:48px}
+.wave{display:flex;gap:5px;align-items:center;height:52px}
+.wave i{width:5px;border-radius:3px;background:#fff;opacity:.9;animation:wave 1s ease-in-out infinite}
+@keyframes wave{50%{transform:scaleY(.4)}}
+.moon{display:flex;gap:12px;align-items:center;background:rgba(10,8,40,.45);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:12px 14px;font-size:13px;text-align:left}
+.moon svg{width:22px;height:22px;color:#C9C8FF;flex:none}
+/* setup */
+.setup{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;padding-top:max(10px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
+.setup-top{display:flex;align-items:center;gap:12px;padding:6px max(16px,env(safe-area-inset-left,0px))}
+.iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line)}
+.iconbtn svg{width:20px;height:20px}
+.progress{flex:1;display:flex;gap:6px}.progress i{flex:1;height:5px;border-radius:3px;background:var(--line);transition:background .3s}.progress i.on{background:var(--pri)}
+.setup-body{flex:1;overflow-y:auto;padding:18px max(24px,env(safe-area-inset-left,0px)) 24px;display:flex;flex-direction:column;gap:14px;max-width:480px;width:100%;margin:0 auto}
+.setup-body.enter>*{animation:enter .35s ease-out both}
+.setup-foot{padding:10px max(24px,env(safe-area-inset-left,0px)) 0;max-width:480px;width:100%;margin:0 auto}
+.step-k{font-size:13px;font-weight:600;color:var(--pri)}
+h1.q{font-size:30px;line-height:1.12}
+.setup .muted{margin:0;font-size:16px}
+.bigin{font-size:26px;font-weight:600;border:0;border-bottom:2px solid var(--line);background:transparent;padding:12px 0;color:var(--ink);width:100%;border-radius:0;margin-top:10px}
+.bigin:focus{outline:none;border-color:var(--pri)}
+.timecards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:6px}
+.tcard{min-width:0;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.tcard input{font-size:18px;font-weight:700;border:0;background:transparent;color:var(--ink);padding:0;width:100%;min-width:0}
+.tic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}.tic svg{width:22px;height:22px}
+.vcard{display:flex;gap:14px;align-items:center;background:var(--pri);color:var(--pri-ink);border-radius:20px;padding:16px;margin-top:4px}
+.vmic{width:56px;height:56px;border-radius:50%;background:#fff;color:#3D3BF3;display:grid;place-items:center;flex:none;box-shadow:0 0 0 8px rgba(255,255,255,.15)}
+.vmic svg{width:26px;height:26px}
+.typeline{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 4px 4px 14px}
+.typeline input{flex:1;min-width:0;border:0;background:transparent;font-size:16px;padding:10px 0;color:var(--ink)}
+.typeline input:focus{outline:none}
+.typeline button{width:40px;height:40px;border-radius:10px;background:var(--pri-soft);color:var(--pri);display:grid;place-items:center}.typeline button svg{width:20px;height:20px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:14px}
+.chip svg{width:16px;height:16px;color:var(--pri)}
+.build{justify-content:center}
+.buildhead{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:6px}
+.halo.sm{width:130px;height:130px}
+.appear{animation:appear .45s ease-out both}
+@keyframes appear{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes tdrop{from{opacity:0;margin-top:-12px}to{opacity:1;margin-top:0}}
 /* toast */
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:14px;align-items:center;width:min(408px,calc(100% - 32px));font-size:14px;box-shadow:0 8px 24px var(--shadow)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));animation:tdrop .25s ease-out;z-index:50;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:14px;align-items:center;width:min(408px,calc(100% - 32px));font-size:14px;box-shadow:0 8px 24px var(--shadow)}
 .toast button{color:var(--pri-sub);font-weight:700;white-space:nowrap}
 :root[data-theme="light"] .toast button{color:#C9C8FF}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -198,6 +286,7 @@ label.f input,label.f select{border:1px solid var(--line);background:var(--surfa
 
 </head>
 <body>
+<div id="splash" class="splash" aria-hidden="true"><div class="splash-in"><span class="av" style="width:96px;height:96px;box-shadow:0 12px 40px rgba(0,0,0,.25)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.1 6.2 6.4 2.3-6.4 2.3L12 19.5l-2.1-6.2L3.5 11l6.4-2.3L12 2.5z"/><path d="M19 16l.8 2.2 2.2.8-2.2.8L19 22l-.8-2.2-2.2-.8 2.2-.8L19 16z"/></svg></span><b>LIA</b></div></div>
 <div class="app" id="app">
   <main id="view" aria-live="polite"></main>
   <nav class="tabs" id="tabs" aria-label="Secciones"></nav>
@@ -473,44 +562,62 @@ function conflicts(){const ev=state.evals.filter(e=>e.date>=ymd(now())).sort((a,
   for(let i=0;i<ev.length-1;i++){if(dayDiff(ev[i].date,ev[i+1].date)<=1)out.push([ev[i],ev[i+1]]);}return out;}
 
 // ---------- Vistas ----------
-function vWelcome(){return `<section class="welcome">
-  <div class="logo">${I.spark.replace('<svg','<svg width="26" height="26"')} LIA</div>
-  <div class="preview"><span class="eyebrow">Un día con LIA</span>
-   <div class="blk k-clase"><b>Clases en la U</b><small>08:00 – 13:00</small></div>
-   <div class="blk k-trabajo"><b>Trabajo</b><small>15:00 – 19:00</small></div>
-   <div class="blk k-estudio"><b>Estudiar Cálculo II</b><small>20:00 – 21:00 · en tu hora libre</small></div></div>
-  <h1>Estudia en las horas que de verdad tienes libres.</h1>
-  <p style="margin:0;opacity:.85">Para universitarios que estudian y trabajan: cada semana Lía te arma un horario para estudiar en tus horas libres, para que no te amanezcas antes de cada examen.</p>
-  <div class="stack"><button class="btn light" data-a="start-own">Empezar con mis horarios</button>
-  <button class="btn ghostw" data-a="see-example">Ver con datos de ejemplo</button></div>
-  <p class="small" style="margin:0;opacity:.7;text-align:center">Tus datos se guardan solo en este teléfono.</p></section>`;}
+function vWelcome(){const s=ui.slide||0;const last=s===2;
+  const slides=[
+   {art:`<div class="art art1"><div class="ring r1"></div><div class="ring r2"></div>${AV(112)}<div class="bubble">¡Hola! Soy Lía</div></div>`,
+    h:'Tu secretaria para estudiar',p:'Organizo tu estudio en las horas que de verdad tienes libres, aunque estudies y trabajes.'},
+   {art:`<div class="art art2"><div class="mini"><span class="eyebrow">Miércoles</span>
+      <div class="blk k-clase"><b>Clases</b><small>08:00 – 13:00</small></div>
+      <div class="blk k-trabajo"><b>Trabajo</b><small>15:00 – 19:00</small></div>
+      <div class="blk k-estudio"><b>Estudiar Cálculo II</b><small>20:00 – 21:00</small><span class="flag">${I.spark} Lía lo ubicó aquí</span></div></div></div>`,
+    h:'Estudia entre clases y trabajo',p:'Me dices tu horario y tus exámenes. Yo reparto tus horas de estudio en tus huecos libres reales.'},
+   {art:`<div class="art art3"><div class="micbig">${I.mic}</div><div class="wave">${[14,26,40,22,48,30,18,36,24].map((h,i)=>`<i style="height:${h}px;animation-delay:${i*90}ms"></i>`).join('')}</div>
+      <div class="moon">${I.moon}<span><b>Duermes a las 23:00</b><br>Sin amanecidas antes del examen</span></div></div>`,
+    h:'Háblame. Duerme tranquilo.',p:'Dime “hoy salgo tarde del trabajo” y reorganizo todo. Nunca más te amanezcas antes de un examen.'}];
+  return `<section class="obw">
+   <div class="obw-top"><span class="logo">${I.spark} LIA</span><button class="skip" id="obw-skip" data-a="slide-go" data-i="2" style="${last?'visibility:hidden':''}">Saltar</button></div>
+   <div class="slides" id="slides">${slides.map((x,i)=>`<div class="slide" aria-hidden="${i!==s}"><div class="art-wrap">${x.art}</div><div class="copy"><h1>${x.h}</h1><p>${x.p}</p></div></div>`).join('')}</div>
+   <div class="obw-bottom" id="obw-bottom">${welcomeBottom(s)}</div></section>`;}
+function welcomeBottom(s){const last=s===2;return `<div class="dots">${[0,1,2].map(i=>`<button data-a="slide-go" data-i="${i}" aria-label="Pantalla ${i+1}" class="${i===s?'on':''}"></button>`).join('')}</div>
+    ${last?`<button class="btn wbtn" data-a="start-own">Empezar</button><button class="wlink" data-a="see-example">Ver primero con datos de ejemplo</button>`
+          :`<button class="btn wbtn" data-a="slide-go" data-i="${s+1}">Siguiente</button><button class="wlink" data-a="see-example">Ver con datos de ejemplo</button>`}`;}
 
-function vOnboarding(){const s=ui.ob;const steps=`<div class="steps">${[1,2,3].map(i=>`<i class="${i<=s?'on':''}"></i>`).join('')}</div>`;
-  if(s===1)return `${steps}<div class="row-h"><button data-a="ob-back" aria-label="Atrás" class="ico">${I.back}</button><span class="kicker">Paso 1 de 2</span></div>
-   <div class="stack"><h1>Tu semana fija</h1><p class="muted" style="margin:0">¿Cuándo <b>no</b> puedes estudiar? Clases, trabajo, traslados. Lo registras una vez y se repite cada semana.</p></div>
-   ${dictar('commit','Dímelo: “trabajo de lunes a viernes de 3 a 7”')}
-   <div class="stack">${state.commitments.map(commitItem).join('')||'<p class="muted small" style="margin:0">Aún no hay compromisos.</p>'}
-   <button class="dashed" data-a="add-commit">${I.plus.replace('<svg','<svg class="ico"')}<span class="grow">Agregar a mano</span></button></div>
-   <div class="card stack"><span class="eyebrow">Tu sueño</span><div class="two"><label class="f">Me despierto<input type="time" id="ob-wake" data-set="wake" value="${state.settings.wake}"></label><label class="f">Me duermo<input type="time" id="ob-sleep" data-set="sleep" value="${state.settings.sleep}"></label></div></div>
-   <button class="btn pri" data-a="ob-next" ${state.commitments.length?'':'disabled style="opacity:.5"'}>Siguiente</button>`;
-  if(s===2)return `${steps}<div class="row-h"><button data-a="ob-back" aria-label="Atrás" class="ico">${I.back}</button><span class="kicker">Paso 2 de 2</span></div>
-   <div class="stack"><h1>Tus evaluaciones</h1><p class="muted" style="margin:0">Exámenes y entregas que se vienen. Lía calcula cuántas horas necesitas para cada uno.</p></div>
-   ${dictar('eval','Dímelo: “parcial de Cálculo el jueves a las 9”')}
-   <div class="stack">${state.evals.map(evalItem).join('')||'<p class="muted small" style="margin:0">Aún no hay evaluaciones.</p>'}
-   <button class="dashed" data-a="add-eval">${I.plus.replace('<svg','<svg class="ico"')}<span class="grow">Agregar a mano</span></button></div>
-   <button class="btn pri" data-a="ob-next" ${state.evals.length?'':'disabled style="opacity:.5"'}>Armar mi horario</button>`;
-  // paso 3: resumen
-  const p=P();const tot=p.blocks.reduce((a,b)=>a+b.e-b.s,0);const free=Object.values(p.days).slice(0,7).reduce((a,d)=>a+d.free,0);
-  const falt=state.evals.filter(e=>p.unmet[e.id]>0);
-  const li=t=>`<div class="row-h"><span class="check">${I.check}</span><span>${t}</span></div>`;
-  return `<div class="stack" style="align-items:center;text-align:center;margin-top:12px">${AV(72)}<h1>Lía armó tu semana</h1><p class="muted" style="margin:0">Esto es lo que hizo por ti:</p></div>
-   <div class="card stack">${li(`Registré ${state.commitments.length} compromisos fijos`)}${li(`Ordené ${state.evals.length} evaluaciones por fecha`)}${li(`Ubiqué ${hrs(tot)} de estudio en tus horas libres`)}${li(`Respeté tu trabajo, tus clases y tu sueño (${state.settings.sleep} – ${state.settings.wake})`)}${li('Nada de estudio la noche antes de un examen: a esa hora duermes')}</div>
-   ${falt.length?`<div class="warn"><span class="ico" style="color:var(--exam-ink)">${I.alert}</span><div class="small"><b>No me alcanza el tiempo para todo.</b><br>Me faltan ${falt.map(e=>`${hrs(p.unmet[e.id])} para ${esc(e.course)}`).join(', ')}. Puedes liberar horas o subir el máximo de estudio por día en Perfil.</div></div>`:''}
-   <p class="muted small" style="text-align:center;margin:0">Tienes ${hrs(free)} libres en los próximos 7 días. ¿Algo cambió? Solo dímelo y lo reorganizo.</p>
-   <button class="btn pri" data-a="ob-finish">Ver mi semana</button>`;}
+const OB_STEPS=5;
+function obShell(step,inner,footer){return `<section class="setup">
+  <div class="setup-top"><button class="iconbtn" data-a="ob-back" aria-label="Atrás">${I.back}</button><div class="progress">${[...Array(OB_STEPS-1)].map((_,i)=>`<i class="${i<step?'on':''}"></i>`).join('')}</div><span style="width:40px"></span></div>
+  <div class="setup-body enter">${inner}</div>
+  <div class="setup-foot">${footer}</div></section>`;}
+function voiceCard(kind,example){return `<div class="vcard"><button class="vmic" data-a="mic" data-target="dict-${kind}" aria-label="Dictar por voz">${I.mic}</button>
+  <div class="grow"><b>Dímelo por voz</b><div class="small" style="opacity:.8">${esc(example)}</div></div></div>
+  <form class="typeline" data-form="dictar" data-kind="${kind}"><input id="dict-${kind}" name="q" placeholder="o escríbelo aquí…" autocomplete="off"><button type="submit" aria-label="Agregar">${I.send}</button></form>`;}
+function vOnboarding(){const s=ui.ob;
+  if(s===1)return obShell(1,`<span class="step-k">Paso 1 de 4</span><h1 class="q">¿Cómo te llamas?</h1><p class="muted">Así Lía sabe cómo hablarte.</p>
+    <input class="bigin" id="ob-name" data-set="name" value="${esc(state.settings.name)}" placeholder="Tu nombre" autocomplete="given-name">`,
+    `<button class="btn pri" data-a="ob-next">Continuar</button>`);
+  if(s===2)return obShell(2,`<span class="step-k">Paso 2 de 4</span><h1 class="q">¿A qué hora duermes${state.settings.name?', '+esc(state.settings.name):''}?</h1><p class="muted">Lía nunca pondrá estudio en tus horas de sueño.</p>
+    <div class="timecards"><label class="tcard"><span class="tic" style="background:var(--night);color:var(--pri-sub)">${I.moon}</span><span class="small muted">Me duermo</span><input type="time" id="ob-sleep" data-set="sleep" value="${state.settings.sleep}"></label>
+    <label class="tcard"><span class="tic" style="background:var(--trabajo);color:var(--trabajo-ink)">${I.sun}</span><span class="small muted">Me despierto</span><input type="time" id="ob-wake" data-set="wake" value="${state.settings.wake}"></label></div>`,
+    `<button class="btn pri" data-a="ob-next">Continuar</button>`);
+  if(s===3)return obShell(3,`<span class="step-k">Paso 3 de 4</span><h1 class="q">¿Cuándo no puedes estudiar?</h1><p class="muted">Clases, trabajo, traslados. Lo registras una vez y se repite cada semana.</p>
+    ${voiceCard('commit','“Trabajo de lunes a viernes de 3 a 7”')}
+    <div class="chips">${[['clase','Clases'],['trabajo','Trabajo'],['traslado','Traslado'],['otro','Otro']].map(([k,l])=>`<button class="chip" data-a="chip-commit" data-type="${k}">${I.plus} ${l}</button>`).join('')}</div>
+    <div class="stack">${state.commitments.map(commitItem).join('')}</div>`,
+    state.commitments.length?`<button class="btn pri" data-a="ob-next">Continuar</button>`:`<button class="btn pri" data-a="ob-need" data-m="Agrega al menos un compromiso: clases o trabajo.">Continuar</button>`);
+  if(s===4)return obShell(4,`<span class="step-k">Paso 4 de 4</span><h1 class="q">¿Qué exámenes y entregas se vienen?</h1><p class="muted">Lía calcula cuántas horas necesitas para cada uno.</p>
+    ${voiceCard('eval','“Parcial de Cálculo el jueves a las 9”')}
+    <div class="chips">${['parcial','final','practica','entrega'].map(k=>`<button class="chip" data-a="chip-eval" data-type="${k}">${I.plus} ${EVAL_TYPES[k].label}</button>`).join('')}</div>
+    <div class="stack">${state.evals.map(evalItem).join('')}</div>`,
+    state.evals.length?`<button class="btn pri" data-a="ob-next">Armar mi horario</button>`:`<button class="btn pri" data-a="ob-need" data-m="Agrega al menos una evaluación.">Armar mi horario</button>`);
+  const p=P();const tot=p.blocks.reduce((a,b)=>a+b.e-b.s,0);const falt=state.evals.filter(e=>p.unmet[e.id]>0);
+  const lines=[`Registré ${state.commitments.length} compromiso${state.commitments.length===1?'':'s'} fijo${state.commitments.length===1?'':'s'}`,`Ordené ${state.evals.length} evaluaci${state.evals.length===1?'ón':'ones'} por fecha`,`Ubiqué ${hrs(tot)} de estudio en tus horas libres`,`Respeté tu trabajo, tus clases y tu sueño`,'Nada de estudio la noche antes de un examen'];
+  return `<section class="setup"><div class="setup-body build">
+    <div class="buildhead"><div class="halo sm">${AV(76)}</div><h1 class="q" style="text-align:center">Lía está armando tu semana…</h1></div>
+    <div class="card stack">${lines.map((t,i)=>`<div class="row-h appear" style="animation-delay:${300+i*380}ms"><span class="check">${I.check}</span><span>${t}</span></div>`).join('')}</div>
+    ${falt.length?`<div class="warn appear" style="animation-delay:2300ms"><span class="ico" style="color:var(--exam-ink)">${I.alert}</span><div class="small"><b>No me alcanza el tiempo para todo.</b><br>Me faltan ${falt.map(e=>`${hrs(p.unmet[e.id])} para ${esc(e.course)}`).join(', ')}. Puedes subir el máximo de estudio por día en Perfil.</div></div>`:''}
+   </div><div class="setup-foot appear" style="animation-delay:2300ms"><button class="btn pri" data-a="ob-finish">Ver mi semana</button></div></section>`;}
 
 function dictar(kind,ph){return `<form class="dashed" data-form="dictar" data-kind="${kind}" style="padding:6px 6px 6px 14px">
-   <input id="dict-${kind}" name="q" placeholder="${esc(ph)}" autocomplete="off" style="flex:1;min-width:0;border:0;background:transparent;color:var(--ink);padding:8px 0;font-weight:500">
+   <input id="dict-${kind}" name="q" placeholder="${esc(ph)}" autocomplete="off" style="flex:1;min-width:0;border:0;background:transparent;color:var(--ink);padding:8px 0;font-weight:500;font-size:16px">
    <button type="button" class="mic" data-a="mic" data-target="dict-${kind}" aria-label="Dictar por voz">${I.mic}</button>
    <button type="submit" class="mic" aria-label="Agregar" style="background:var(--pri-soft);color:var(--pri)">${I.send}</button></form>`;}
 function commitItem(c){return `<button class="item" data-a="edit-commit" data-id="${c.id}"><span class="sw k-${c.type}">${COMMIT_TYPES[c.type][0]}</span><span class="grow"><b>${esc(c.name)}</b><br><span class="small muted">${diasTxt(c.days)} · ${c.start} – ${c.end}</span></span><span class="tag muted">${hrs(c.days.length*(toMin(c.end)-toMin(c.start)))}</span></button>`;}
@@ -594,14 +701,15 @@ function vPerfil(){const S=state.settings,p=P();const covered=state.evals.filter
   <div class="stack">${state.mode==='example'?'<button class="btn pri" data-a="start-own">Usar mis horarios</button>':'<button class="btn sec" data-a="see-example">Ver datos de ejemplo</button>'}<button class="btn danger" data-a="ask-reset">Borrar todo</button></div>`;}
 
 // ---------- Hojas (formularios) ----------
-function sheetCommit(id){const c=state.commitments.find(x=>x.id===id)||{id:'',name:'',type:'trabajo',days:[1,2,3,4,5],start:'15:00',end:'19:00'};
+const COMMIT_PRESET={clase:{name:'Clases',start:'08:00',end:'13:00'},trabajo:{name:'Trabajo',start:'15:00',end:'19:00'},traslado:{name:'Traslado',start:'19:00',end:'19:45'},otro:{name:'',start:'18:00',end:'19:00'}};
+function sheetCommit(id,preset){const pr=preset?COMMIT_PRESET[preset]:null;const c=state.commitments.find(x=>x.id===id)||{id:'',name:pr?pr.name:'',type:preset||'trabajo',days:[1,2,3,4,5],start:pr?pr.start:'15:00',end:pr?pr.end:'19:00'};
   return `<form class="stack" data-form="commit" data-id="${c.id}" style="gap:14px"><div class="grab"></div><h2>${c.id?'Editar compromiso':'Nuevo compromiso'}</h2>
   <label class="f">Nombre<input id="c-name" name="name" required value="${esc(c.name)}" placeholder="Trabajo, Clases, Gimnasio…"></label>
   <label class="f">Tipo<select id="c-type" name="type">${Object.entries(COMMIT_TYPES).map(([k,v])=>`<option value="${k}" ${c.type===k?'selected':''}>${v}</option>`).join('')}</select></label>
   <div class="f">Días<div class="dpick">${[1,2,3,4,5,6,0].map(d=>`<label><input type="checkbox" name="d" value="${d}" ${c.days.includes(d)?'checked':''}><span>${DIAS_C[d]}</span></label>`).join('')}</div></div>
   <div class="two"><label class="f">Desde<input type="time" id="c-start" name="start" required value="${c.start}"></label><label class="f">Hasta<input type="time" id="c-end" name="end" required value="${c.end}"></label></div>
   <button class="btn pri" type="submit">Guardar</button>${c.id?`<button class="btn danger" type="button" data-a="del-commit" data-id="${c.id}">Eliminar</button>`:''}<button class="btn sec" type="button" data-a="close">Cancelar</button></form>`;}
-function sheetEval(id){const t=ymd(addDays(now(),3));const e=state.evals.find(x=>x.id===id)||{id:'',type:'parcial',course:'',date:t,time:'09:00',hours:5};
+function sheetEval(id,preset){const t=ymd(addDays(now(),3));const ty=preset||'parcial';const e=state.evals.find(x=>x.id===id)||{id:'',type:ty,course:'',date:t,time:ty==='entrega'?'23:59':'09:00',hours:EVAL_TYPES[ty].h};
   return `<form class="stack" data-form="eval" data-id="${e.id}" style="gap:14px"><div class="grab"></div><h2>${e.id?'Editar evaluación':'Nueva evaluación'}</h2>
   <div class="two"><label class="f">Tipo<select id="e-type" name="type" data-a-change="etype">${Object.entries(EVAL_TYPES).map(([k,v])=>`<option value="${k}" ${e.type===k?'selected':''}>${v.label}</option>`).join('')}</select></label>
   <label class="f">Horas de estudio<input type="number" id="e-hours" name="hours" min="1" max="40" step="0.5" value="${e.hours}"></label></div>
@@ -642,6 +750,17 @@ function installHTML(){if(isStandalone())return '<div class="card small muted">L
   if(isIOS())return '<div class="card small">Para instalarla en iPhone: abre esta página en <b>Safari</b>, toca <b>Compartir</b> y luego <b>Agregar a inicio</b>.</div>';
   return '<div class="card small">Para instalarla: abre el menú del navegador (⋮) y toca <b>Instalar app</b> o <b>Agregar a pantalla de inicio</b>.</div>';}
 
+// ---------- Sensación de app ----------
+function haptic(){try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}}
+function goSlide(i){const el=document.getElementById('slides');if(!el)return;i=Math.max(0,Math.min(2,i));el.scrollTo({left:el.clientWidth*i,behavior:'smooth'});}
+function patchSlides(){const s=ui.slide||0;const b=document.getElementById('obw-bottom');if(b)b.innerHTML=welcomeBottom(s);
+  const k=document.getElementById('obw-skip');if(k)k.style.visibility=s===2?'hidden':'';
+  document.querySelectorAll('#slides .slide').forEach((el,i)=>el.setAttribute('aria-hidden',String(i!==s)));}
+let slideRaf=0;
+function bindSlides(){const el=document.getElementById('slides');if(!el)return;
+  requestAnimationFrame(()=>{el.scrollLeft=el.clientWidth*(ui.slide||0);});
+  el.addEventListener('scroll',()=>{cancelAnimationFrame(slideRaf);slideRaf=requestAnimationFrame(()=>{const i=Math.round(el.scrollLeft/el.clientWidth);if(i!==(ui.slide||0)){ui.slide=i;patchSlides();}});},{passive:true});}
+
 // ---------- Render ----------
 const TABS=[['hoy','Hoy','sun'],['semana','Semana','cal'],['lia','Lía',null],['evals','Evaluaciones','list'],['perfil','Perfil','user']];
 function render(){const v=document.getElementById('view'),tabs=document.getElementById('tabs');
@@ -650,7 +769,9 @@ function render(){const v=document.getElementById('view'),tabs=document.getEleme
   if(ui.welcome)v.innerHTML=vWelcome();
   else if(!state.onboarded)v.innerHTML=vOnboarding();
   else v.innerHTML={hoy:vHoy,semana:vSemana,lia:vLia,evals:vEvals,perfil:vPerfil}[ui.tab]();
-  document.body.classList.toggle('wm',!!ui.welcome);v.style.paddingTop=ui.welcome?'0':'';v.style.paddingBottom=ui.welcome?'0':'';
+  document.body.classList.toggle('wm',!!ui.welcome);v.style.paddingTop=inOb?'0':'';v.style.paddingBottom=inOb?'0':'';
+  const tc=document.querySelector('meta[name=theme-color]');if(tc)tc.content=ui.welcome?'#3D3BF3':getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#F6F4EF';
+  if(ui.welcome)bindSlides();
   tabs.innerHTML=TABS.map(([k,l,ic])=>`<button class="tab" data-a="tab" data-t="${k}" ${ui.tab===k?'aria-current="page"':''}>${ic?I[ic]:AV(40)}<span>${l}</span></button>`).join('');
   const L=document.getElementById('layer');
   if(ui.session)L.innerHTML=vSession();
@@ -705,14 +826,18 @@ function applyException(ex){const p0=P();snapshot();state.exceptions.push({id:ui
   msg+=` Igual duermes a las ${state.settings.sleep}.`;liaSay(msg,{undo:true});ui.pending=null;render();}
 
 const A={
- tab:d=>{ui.tab=d.t;ui.sheet=null;render();document.getElementById('view').scrollTop=0;},
+ tab:d=>{if(ui.tab!==d.t)haptic();const ch=ui.tab!==d.t;ui.tab=d.t;ui.sheet=null;render();const v=document.getElementById('view');v.scrollTop=0;if(ch){v.classList.remove('enter');void v.offsetWidth;v.classList.add('enter');}},
  'see-example':()=>{state=exampleState(now());save();ui.welcome=false;ui.tab='hoy';ui.sheet=null;render();},
  'start-own':()=>{if(state.mode==='example'&&!ui.welcome){ui.sheet=sheetOwn();render();return;}A['own-go']();},
  'own-go':()=>{state=emptyState();save();ui.welcome=false;ui.ob=1;ui.sheet=null;render();},
- 'ob-back':()=>{if(ui.ob<=1){ui.welcome=true;}else ui.ob--;render();},
- 'ob-next':()=>{ui.ob++;render();document.getElementById('view').scrollTop=0;},
- 'ob-finish':()=>{state.onboarded=true;save();ui.tab='semana';ui.sel=null;render();},
+ 'ob-back':()=>{haptic();if(ui.ob<=1){ui.welcome=true;ui.slide=2;}else ui.ob--;render();},
+ 'ob-next':()=>{haptic();ui.ob++;render();document.getElementById('view').scrollTop=0;},
+ 'ob-finish':()=>{haptic();state.onboarded=true;save();ui.tab='hoy';ui.sel=null;render();toast(`¡Listo${state.settings.name?', '+state.settings.name:''}! Esta es tu semana.`);},
  'add-commit':()=>{ui.sheet=sheetCommit();render();},
+ 'chip-commit':d=>{haptic();ui.sheet=sheetCommit(null,d.type);render();setTimeout(()=>{const n=document.getElementById('c-name');if(n&&!n.value)n.focus();},250);},
+ 'chip-eval':d=>{haptic();ui.sheet=sheetEval(null,d.type);render();setTimeout(()=>{const n=document.getElementById('e-course');if(n)n.focus();},250);},
+ 'ob-need':d=>{haptic();toast(d.m);},
+ 'slide-go':d=>{haptic();goSlide(+d.i);},
  'edit-commit':d=>{ui.sheet=sheetCommit(d.id);render();},
  'del-commit':d=>{snapshot();state.commitments=state.commitments.filter(c=>c.id!==d.id);save();ui.sheet=null;rerenderKeepScroll();toast('Compromiso eliminado.',true);},
  'add-eval':()=>{ui.sheet=sheetEval();render();},
@@ -781,6 +906,7 @@ function stopMic(useIt){if(!ui.listen)return;const t=ui.listen.text,tg=ui.listen
 function submitVoice(target,text){const from=target==='chat-in'?'chat':target==='dict-commit'?'commit':'eval';handleText(text,from);}
 
 render();
+setTimeout(()=>{const sp=document.getElementById('splash');if(sp){sp.classList.add('out');setTimeout(()=>sp.remove(),450);}},matchMedia('(prefers-reduced-motion: reduce)').matches?0:900);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
 setInterval(()=>{if(!ui.session&&!ui.sheet&&!ui.listen&&!document.activeElement.matches('input,select'))rerenderKeepScroll();},60000);
 </script>
