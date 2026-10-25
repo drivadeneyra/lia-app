@@ -1,5 +1,5 @@
 // LIA service worker: la app abre sin conexión y se actualiza sola al volver la red.
-const CACHE = 'lia-v6';
+const CACHE = 'lia-v7';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/lib/supabase.js', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

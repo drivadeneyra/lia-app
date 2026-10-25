@@ -744,7 +744,7 @@ function vLia(){const ph='Escríbele a Lía…';const on=liaOnline();
   <div class="chat" id="chat">${state.chat.slice(-30).map((m,i,a)=>msgHTML(m,i===a.length-1)).join('')}${ui.pending?pendingHTML():''}${ui.thinking?`<div class="msg">${AV(28)}<div class="bub typing" aria-label="Lía está escribiendo"><i></i><i></i><i></i></div></div>`:''}</div>
   ${ui.thinking||ui.pending?'':`<div class="chips">${sug.map(s=>`<button class="pill ghost" data-a="chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}<button class="pill" data-a="syllabus" data-from="syllabus-chat">${I.clip} Subir sílabo</button></div>`}
   <form class="inbar" data-form="chat"><button type="button" class="iconbtn" data-a="syllabus" data-from="syllabus-chat" aria-label="Subir sílabo">${I.clip}</button><input id="chat-in" name="q" placeholder="${ph}" autocomplete="off" enterkeyhint="send"><button type="button" class="mic" data-a="mic" data-target="chat-in" aria-label="Hablar con Lía">${I.mic}</button></form>`;}
-function msgHTML(m,last){return m.from==='me'?`<div class="msg me"><div class="bub">${m.voice?`<span class="vtag">${I.mic} Nota de voz</span>`:''}${m.file?`<span class="vtag">${I.clip} Archivo</span>`:''}${esc(m.text)}</div></div>`:`<div class="msg">${AV(28)}<div class="bub">${esc(m.text)}${m.undo&&last&&undoStack?`<button class="pill ghost" data-a="undo" style="align-self:flex-start">Deshacer</button>`:''}</div></div>`;}
+function msgHTML(m,last){return m.from==='me'?`<div class="msg me"><div class="bub">${m.voice?`<span class="vtag">${I.mic} Nota de voz</span>`:''}${m.file?`<span class="vtag">${I.clip} Archivo</span>`:''}${esc(m.text)}</div></div>`:`<div class="msg">${AV(28)}<div class="bub">${esc(m.text)}${(m.goto||(m.undo&&undoStack))&&last?`<div class="row-h" style="flex-wrap:wrap">${m.goto?`<button class="pill" data-a="goto-day" data-d="${m.goto}">${I.cal} Ver ${esc(fechaCorta(m.goto))}</button>`:''}${m.undo&&undoStack?`<button class="pill ghost" data-a="undo">Deshacer</button>`:''}</div>`:''}</div></div>`;}
 function itemLine(it){if(it.kind==='eval')return `${EVAL_TYPES[it.type].label} · ${it.course} — ${fechaCorta(it.date)} ${it.time} (${it.hours} h de estudio)`;
   return `${it.name} — ${diasTxt(it.days)} · ${it.start} – ${it.end}`;}
 function pendingHTML(){const it=ui.pending.items||[];const xs=ui.pending.exs||(ui.pending.ex?[ui.pending.ex]:[]);return `<div class="msg">${AV(28)}<div class="bub"><span class="eyebrow">¿Lo guardo?</span>${xs.map(x=>`<div class="blk k-excepcion"><b>${esc(x.label)}</b><small>${esc(cap(fechaCorta(x.date)))} · ${x.start} – ${x.end}</small></div>`).join('')}${it.map(i=>`<div class="blk ${i.kind==='eval'?(i.type==='entrega'?'k-trabajo':'k-examen'):'k-'+i.type}"><b>${esc(i.kind==='eval'?EVAL_TYPES[i.type].label+' · '+i.course:i.name)}</b><small>${esc(i.kind==='eval'?`${cap(fechaCorta(i.date))} · ${i.time} · ${i.hours} h de estudio`:`${diasTxt(i.days)} · ${i.start} – ${i.end}`)}</small></div>`).join('')}
@@ -939,17 +939,26 @@ async function callLia(payload){
     throw{userMsg:msg,status:st,offline:!st};}
   if(!data||typeof data.reply!=='string')throw{userMsg:'Lía no pudo responder. Inténtalo de nuevo.'};
   return data;}
-function liaActions(res){const items=[],exs=[],ops=[];
-  for(const a of Array.isArray(res.actions)?res.actions:[]){if(!a||typeof a!=='object')continue;
-    if(a.type==='add_eval'&&validDate(a.date)){const ty=EVAL_TYPES[a.eval_type]?a.eval_type:'parcial';
-      items.push({kind:'eval',type:ty,course:String(a.course||'Curso').trim().slice(0,60)||'Curso',date:a.date,time:validTime(a.time)?a.time:(ty==='entrega'?'23:59':'09:00'),hours:Math.min(40,Math.max(.5,+a.hours||EVAL_TYPES[ty].h))});}
-    else if(a.type==='add_commitment'&&Array.isArray(a.days)&&validTime(a.start)&&validTime(a.end)&&toMin(a.end)>toMin(a.start)){
-      const days=[...new Set(a.days.map(Number).filter(d=>d>=0&&d<=6))];if(!days.length)continue;const k=COMMIT_TYPES[a.kind]?a.kind:'otro';
-      items.push({kind:'commit',type:k,name:String(a.name||COMMIT_TYPES[k]).trim().slice(0,40)||COMMIT_TYPES[k],days,start:a.start,end:a.end});}
-    else if(a.type==='block_time'&&validDate(a.date)&&validTime(a.start)&&validTime(a.end)&&toMin(a.end)>toMin(a.start))exs.push({date:a.date,start:a.start,end:a.end,label:String(a.label||'No disponible').slice(0,40)});
-    else if(a.type==='free_day'&&validDate(a.date))exs.push({date:a.date,start:state.settings.wake,end:state.settings.sleep,label:'Día libre'});
-    else if(a.type==='delete_eval'||a.type==='mark_done')ops.push(a);}
-  return{items,exs,ops};}
+function normDate(v){if(typeof v!=='string')return null;const m=v.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(!m)return null;const s=`${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;return validDate(s)?s:null;}
+function normTime(v){if(typeof v!=='string'||!v.trim())return null;if(v.includes('T'))v=v.split('T')[1];
+  const m=v.trim().toLowerCase().match(/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(a\.?\s?m\.?|p\.?\s?m\.?)?/);if(!m)return null;
+  let h=+m[1],mi=+(m[2]||0);const ap=m[3]?m[3][0]:null;if(ap==='p'&&h<12)h+=12;if(ap==='a'&&h===12)h=0;if(h>23||mi>59)return null;return pad(h)+':'+pad(mi);}
+function normDays(v){if(!Array.isArray(v))v=v!=null?[v]:[];const out=[];for(let d of v){if(typeof d==='string'&&!/^\d$/.test(d.trim())){const k=norm(d.trim()).replace(/s$/,'');const w=DAYW[k]??DAYW[k+'s'];if(w!=null)out.push(w);continue;}d=Number(d);if(d===7)d=0;if(d>=0&&d<=6)out.push(d);}return[...new Set(out)];}
+function liaActions(res){const items=[],exs=[],ops=[];let raw=0;
+  for(const a of Array.isArray(res.actions)?res.actions:[]){if(!a||typeof a!=='object')continue;raw++;
+    const type=String(a.type||'').toLowerCase();
+    if(type==='add_eval'){const date=normDate(a.date||a.datetime||a.fecha);if(!date)continue;const et=String(a.eval_type||a.kind||'').toLowerCase();const ty=EVAL_TYPES[et]?et:'parcial';
+      items.push({kind:'eval',type:ty,course:String(a.course||a.name||'Curso').trim().slice(0,60)||'Curso',date,time:normTime(a.time||a.start||a.hora||'')||(ty==='entrega'?'23:59':'09:00'),hours:Math.min(40,Math.max(.5,+a.hours||EVAL_TYPES[ty].h))});}
+    else if(type==='add_commitment'){const days=normDays(a.days);const st=normTime(a.start||a.start_time||''),en=normTime(a.end||a.end_time||'');
+      if(!days.length||!st||!en||toMin(en)<=toMin(st))continue;const k=COMMIT_TYPES[a.kind]?a.kind:'otro';
+      items.push({kind:'commit',type:k,name:String(a.name||a.label||COMMIT_TYPES[k]).trim().slice(0,40)||COMMIT_TYPES[k],days,start:st,end:en});}
+    else if(type==='block_time'){const date=normDate(a.date||a.start||a.datetime||a.fecha);const st=normTime(a.start||a.start_time||a.time||a.hora||'');
+      if(!date||!st)continue;let en=normTime(a.end||a.end_time||'');if(!en||toMin(en)<=toMin(st))en=fmt(Math.min(toMin(st)+120,24*60-1));
+      exs.push({date,start:st,end:en,label:String(a.label||a.name||'Ocupado').slice(0,40)});}
+    else if(type==='free_day'){const date=normDate(a.date||a.fecha);if(date)exs.push({date,start:state.settings.wake,end:state.settings.sleep,label:String(a.label||'Día libre').slice(0,40)});}
+    else if(type==='delete_eval'||type==='mark_done')ops.push({...a,type});}
+  return{items,exs,ops,raw};}
+function weekOffsetFor(d){const n=now();const m0=addDays(n,-((n.getDay()+6)%7));const dt=fromYmd(d);const m1=addDays(dt,-((dt.getDay()+6)%7));return Math.round((m1-m0)/(7*864e5));}
 function movesMsg(p0,exs){const p1=P();const days=new Set(exs.map(x=>x.date));
   const lost=p0.blocks.filter(b=>exs.some(x=>x.date===b.date&&b.s<toMin(x.end)&&b.e>toMin(x.start)));
   if(!lost.length)return'';const moved=p1.blocks.filter(b=>days.has(b.date)&&!p0.blocks.some(x=>x.date===b.date&&x.s===b.s&&x.evalId===b.evalId));
@@ -979,15 +988,17 @@ async function askLia(payload,from){
     return;}
   ui.thinking=false;ui.busy=false;
   if(payload.audio&&res.transcript&&inChat)state.chat.push({from:'me',text:String(res.transcript).slice(0,500),voice:true});
-  const {items,exs,ops}=liaActions(res);
-  const reply=(res.reply||'').trim();
+  const {items,exs,ops,raw}=liaActions(res);
+  let reply=(res.reply||'').trim();
+  if(raw>0&&!items.length&&!exs.length&&!ops.length)reply=(reply?reply+' ':'')+'Ojo: no pude guardarlo porque me faltaron datos. Dime el día y la hora exactos, por favor.';
+  const goto=(exs[0]&&exs[0].date)||(items.find(i=>i.kind==='eval')||{}).date||null;
   if(!inChat){ // registro inicial y campos de dictado: se aplica directo, con deshacer
     if(!items.length&&!exs.length){toast(reply||'No te entendí. Inténtalo con otras palabras.');rerenderKeepScroll();return;}
     applyAll(items,exs,ops);rerenderKeepScroll();
     toast(items.length?`Lía agregó: ${items.map(i=>i.kind==='eval'?i.course:i.name).join(', ')}`:reply,true);return;}
   const needConfirm=items.length>0||(exs.length>0&&state.settings.autonomy==='ask');
-  if(needConfirm){liaSay(reply||'Esto es lo que entendí. ¿Lo guardo?');ui.pending={items,exs,ops};render();return;}
-  if(exs.length||ops.length){const extra=applyAll([],exs,ops);liaSay((reply||'Listo.')+extra,{undo:true});render();return;}
+  if(needConfirm){liaSay(reply||'Esto es lo que entendí. ¿Lo guardo?');ui.pending={items,exs,ops,goto};render();return;}
+  if(exs.length||ops.length){const extra=applyAll([],exs,ops);liaSay((reply||'Listo.')+extra,{undo:true,goto});render();return;}
   liaSay(reply||'No te entendí bien. ¿Me lo dices de otra forma?');render();}
 
 // ---------- Grabar audio (funciona en Android y iPhone, instalada o no) ----------
@@ -1071,9 +1082,10 @@ const A={
  wk:d=>{ui.weekOffset+=+d.v;ui.sel=null;render();},
  sel:d=>{ui.sel=d.d;rerenderKeepScroll();},
  chip:d=>{haptic();if(liaOnline())askLia({text:d.q},'chat');else handleText(d.q,'chat');},
+ 'goto-day':d=>{haptic();ui.tab='semana';ui.weekOffset=weekOffsetFor(d.d);ui.sel=d.d;render();document.getElementById('view').scrollTop=0;},
  syllabus:d=>{haptic();pickSyllabus(d.from||'syllabus-chat');},
  confirm:()=>{const p=ui.pending;ui.pending=null;haptic();if(p.ex){applyException(p.ex);return;}
-   if(p.exs||p.ops){const extra=applyAll(p.items||[],p.exs||[],p.ops||[]);const P1=P();liaSay(`Listo, guardado.${extra} Ahora tienes ${hrs(P1.blocks.reduce((a,b)=>a+b.e-b.s,0))} de estudio repartidas en tus horas libres.`,{undo:true});render();return;}
+   if(p.exs||p.ops){const extra=applyAll(p.items||[],p.exs||[],p.ops||[]);const P1=P();liaSay(`Listo, guardado.${extra} Ahora tienes ${hrs(P1.blocks.reduce((a,b)=>a+b.e-b.s,0))} de estudio repartidas en tus horas libres.`,{undo:true,goto:p.goto});render();return;}
    applyItems(p.items);const P1=P();
    liaSay(`Listo, agregué ${p.items.map(i=>i.kind==='eval'?`${EVAL_TYPES[i.type].label.toLowerCase()} de ${i.course}`:i.name.toLowerCase()).join(' y ')}. Ahora tienes ${hrs(P1.blocks.reduce((a,b)=>a+b.e-b.s,0))} de estudio repartidas en tus horas libres.`,{undo:true});render();},
  cancel:()=>{ui.pending=null;liaSay('Ok, no guardé nada. Dímelo de nuevo con más detalle o agrégalo a mano en Evaluaciones o Perfil.');render();},
